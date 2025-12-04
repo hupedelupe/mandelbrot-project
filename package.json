@@ -1,0 +1,12 @@
+{
+  "name": "mandelbrot-generator",
+  "version": "1.0.0",
+  "description": "Automated Mandelbrot fractal generator",
+  "main": "mandelbrot-generator.js",
+  "scripts": {
+    "generate": "node mandelbrot-generator.js"
+  },
+  "dependencies": {
+    "canvas": "^2.11.2"
+  }
+}

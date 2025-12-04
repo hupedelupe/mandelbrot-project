@@ -1,0 +1,59 @@
+zsh: no such file or directory: /usr/bin/node
+Starting Mandelbrot generation...
+Palette: Mystic_Forest, Region: Tendril_Garden
+Step 1/4: Scanning at 53×
+Found complexity: 362.0
+Step 2/4: Scanning at 462×
+Found complexity: 332.0
+Step 3/4: Scanning at 3944×
+Found complexity: 291.0
+Step 4/4: Scanning at 39067×
+Found complexity: 267.0
+Final zoom: 130162×
+Rendering 2560×1440...
+Progress: 0.0%
+Progress: 6.9%
+Progress: 13.9%
+Progress: 20.8%
+Progress: 27.8%
+Progress: 34.7%
+Progress: 41.7%
+Progress: 48.6%
+Progress: 55.6%
+Progress: 62.5%
+Progress: 69.4%
+Progress: 76.4%
+Progress: 83.3%
+Progress: 90.3%
+Progress: 97.2%
+✓ Saved: ./mandelbrot_images/image_1.png
+✓ Saved: ./mandelbrot_images/image_2.png
+Generation complete!
+Starting Mandelbrot generation...
+Palette: Volcanic_Fury, Region: Eastern_Spiral
+Step 1/3: Scanning at 79×
+Found complexity: 348.0
+Step 2/3: Scanning at 456×
+Found complexity: 392.0
+Step 3/3: Scanning at 2482×
+Found complexity: 342.0
+Final zoom: 17214×
+Rendering 2560×1440...
+Progress: 0.0%
+Progress: 6.9%
+Progress: 13.9%
+Progress: 20.8%
+Progress: 27.8%
+Progress: 34.7%
+Progress: 41.7%
+Progress: 48.6%
+Progress: 55.6%
+Progress: 62.5%
+Progress: 69.4%
+Progress: 76.4%
+Progress: 83.3%
+Progress: 90.3%
+Progress: 97.2%
+✓ Saved: ./mandelbrot_images/image_1.png
+✓ Saved: ./mandelbrot_images/image_2.png
+Generation complete!
