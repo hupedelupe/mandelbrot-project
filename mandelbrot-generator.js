@@ -288,48 +288,12 @@ async function generateFractal() {
     fs.writeFileSync(`${CONFIG.outputDir}/fractal_2.png`, buffer);
     
     console.log(`✓ Saved: fractal.png & fractal_2.png`);
-    
-    // Push to Macs
-    pushToMacs(buffer);
-    
+
     return;
   }
   
   console.error(`Failed to generate quality image after ${maxAttempts} attempts`);
   process.exit(1);
-}
-
-function pushToMacs(imageBuffer) {
-  if (!config.macClients || config.macClients.length === 0) {
-    console.log('No Mac clients configured');
-    return;
-  }
-  
-  const tempFile = '/tmp/fractal_push.png';
-  fs.writeFileSync(tempFile, imageBuffer);
-  
-  for (const mac of config.macClients) {
-    console.log(`Pushing to ${mac.name} (${mac.ip})...`);
-    
-    try {
-      // Use global SSH key path
-      const keyPath = config.server.sshKeyPath;
-      
-      // SCP the file to Mac
-      const scpCmd = `scp -i ${keyPath} -o StrictHostKeyChecking=no ${tempFile} ${mac.username}@${mac.ip}:~/fractal.png`;
-      execSync(scpCmd, { stdio: 'inherit' });
-      
-      // Set as wallpaper via SSH
-      const sshCmd = `ssh -i ${keyPath} -o StrictHostKeyChecking=no ${mac.username}@${mac.ip} "osascript -e 'tell application \\"System Events\\" to tell every desktop to set picture to \\"~/fractal.png\\"'"`;
-      execSync(sshCmd, { stdio: 'inherit' });
-      
-      console.log(`✓ Pushed to ${mac.name}`);
-    } catch (error) {
-      console.error(`✗ Failed to push to ${mac.name}:`, error.message);
-    }
-  }
-  
-  fs.unlinkSync(tempFile);
 }
 
 generateFractal().catch(console.error);

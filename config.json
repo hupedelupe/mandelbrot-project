@@ -4,18 +4,11 @@
       "width": 2560,
       "height": 1440,
       "maxIter": 512,
-      "sshKeyPath": "/home/ubuntu/.ssh/id_rsa"
+      "publicUrl": "http://141.147.117.4/fractals/fractal.png"
     },
     "qualityControl": {
       "minColorDiversity": 0.15,
       "minVisiblePixels": 0.20,
       "minComplexityScore": 8
-    },
-    "macClients": [
-      {
-        "name": "Hugh's MacBook",
-        "ip": "10.100.96.225",
-        "username": "hughstevenson"
-      }
-    ]
+    }
   }
