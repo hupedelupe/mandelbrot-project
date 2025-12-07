@@ -1,15 +1,17 @@
 #!/bin/bash
+set -e
 
-# Mandelbrot Wallpaper Updater
-# Pulls latest fractal from server and sets as wallpaper
+# Get absolute path to script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+IMAGE_DIR="$PROJECT_DIR/images"
 
-SERVER_URL="http://141.147.117.4/fractals/fractal.png"
-LOCAL_PATH="$HOME/fractal.png"
+# Create images directory if missing
+mkdir -p "$IMAGE_DIR"
 
-# Download latest image
-curl -s -o "$LOCAL_PATH" "$SERVER_URL"
+# Download fractals
+curl -s -o "$IMAGE_DIR/fractal.png"     http://141.147.117.4/fractals/fractal.png
+curl -s -o "$IMAGE_DIR/fractal_2.png"   http://141.147.117.4/fractals/fractal_2.png
 
-# Set as wallpaper
-osascript -e "tell application \"System Events\" to tell every desktop to set picture to \"$LOCAL_PATH\""
-
-echo "Wallpaper updated at $(date)"
+# Output first image path for Shortcuts input
+echo "$IMAGE_DIR/fractal.png"

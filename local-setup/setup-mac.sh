@@ -10,8 +10,8 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Paths
 WALLPAPER_SCRIPT="$SCRIPT_DIR/update-wallpaper.sh"
-PLIST_TEMPLATE="$SCRIPT_DIR/com.mandelbrot.wallpaper.plist"
-PLIST_DEST="$HOME/Library/LaunchAgents/com.mandelbrot.wallpaper.plist"
+# PLIST_TEMPLATE="$SCRIPT_DIR/com.mandelbrot.wallpaper.plist"
+# PLIST_DEST="$HOME/Library/LaunchAgents/com.mandelbrot.wallpaper.plist"
 LOG_PATH="$HOME/Library/Logs/mandelbrot-wallpaper.log"
 
 echo "Repository: $REPO_DIR"
@@ -22,23 +22,23 @@ echo ""
 chmod +x "$WALLPAPER_SCRIPT"
 echo "✓ Made update-wallpaper.sh executable"
 
-# Create LaunchAgents directory if it doesn't exist
-mkdir -p "$HOME/Library/LaunchAgents"
-mkdir -p "$HOME/Library/Logs"
+# # Create LaunchAgents directory if it doesn't exist
+# mkdir -p "$HOME/Library/LaunchAgents"
+# mkdir -p "$HOME/Library/Logs"
 
-# Copy plist and replace placeholders
-sed -e "s|SCRIPT_PATH_PLACEHOLDER|$WALLPAPER_SCRIPT|g" \
-    -e "s|LOG_PATH_PLACEHOLDER|$LOG_PATH|g" \
-    "$PLIST_TEMPLATE" > "$PLIST_DEST"
+# # Copy plist and replace placeholders
+# sed -e "s|SCRIPT_PATH_PLACEHOLDER|$WALLPAPER_SCRIPT|g" \
+#     -e "s|LOG_PATH_PLACEHOLDER|$LOG_PATH|g" \
+#     "$PLIST_TEMPLATE" > "$PLIST_DEST"
 
-echo "✓ Created LaunchAgent plist"
+# echo "✓ Created LaunchAgent plist"
 
-# Unload if already loaded (in case of re-setup)
-launchctl unload "$PLIST_DEST" 2>/dev/null || true
+# # Unload if already loaded (in case of re-setup)
+# launchctl unload "$PLIST_DEST" 2>/dev/null || true
 
-# Load the LaunchAgent
-launchctl load "$PLIST_DEST"
-echo "✓ Loaded LaunchAgent"
+# # Load the LaunchAgent
+# launchctl load "$PLIST_DEST"
+# echo "✓ Loaded LaunchAgent"
 
 # Run once immediately
 echo ""
@@ -56,3 +56,24 @@ echo ""
 echo "To manually update: $WALLPAPER_SCRIPT"
 echo "To uninstall: launchctl unload $PLIST_DEST && rm $PLIST_DEST"
 echo ""
+
+echo ""
+echo "=== Checking cron job ==="
+
+CRON_CMD="1 * * * * $WALLPAPER_SCRIPT"
+EXISTING_CRON=$(crontab -l 2>/dev/null || true)
+
+# Check if cron already contains the job
+if echo "$EXISTING_CRON" | grep -F "$WALLPAPER_SCRIPT" >/dev/null; then
+    echo "✓ Cron job already exists"
+else
+    echo "Adding cron entry..."
+
+    # Add the cron entry safely
+    (
+        echo "$EXISTING_CRON"
+        echo "$CRON_CMD"
+    ) | crontab -
+
+    echo "✓ Cron job added: $CRON_CMD"
+fi
