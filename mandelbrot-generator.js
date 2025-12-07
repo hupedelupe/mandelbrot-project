@@ -305,7 +305,6 @@ function pushToMacs(imageBuffer) {
     return;
   }
   
-  // Save temp file
   const tempFile = '/tmp/fractal_push.png';
   fs.writeFileSync(tempFile, imageBuffer);
   
@@ -313,12 +312,15 @@ function pushToMacs(imageBuffer) {
     console.log(`Pushing to ${mac.name} (${mac.ip})...`);
     
     try {
+      // Use global SSH key path
+      const keyPath = config.server.sshKeyPath;
+      
       // SCP the file to Mac
-      const scpCmd = `scp -i ${mac.keyPath} -o StrictHostKeyChecking=no ${tempFile} ${mac.username}@${mac.ip}:~/fractal.png`;
+      const scpCmd = `scp -i ${keyPath} -o StrictHostKeyChecking=no ${tempFile} ${mac.username}@${mac.ip}:~/fractal.png`;
       execSync(scpCmd, { stdio: 'inherit' });
       
       // Set as wallpaper via SSH
-      const sshCmd = `ssh -i ${mac.keyPath} -o StrictHostKeyChecking=no ${mac.username}@${mac.ip} "osascript -e 'tell application \\"System Events\\" to tell every desktop to set picture to \\"~/fractal.png\\"'"`;
+      const sshCmd = `ssh -i ${keyPath} -o StrictHostKeyChecking=no ${mac.username}@${mac.ip} "osascript -e 'tell application \\"System Events\\" to tell every desktop to set picture to \\"~/fractal.png\\"'"`;
       execSync(sshCmd, { stdio: 'inherit' });
       
       console.log(`✓ Pushed to ${mac.name}`);

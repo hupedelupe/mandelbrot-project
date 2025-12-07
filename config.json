@@ -3,7 +3,8 @@
       "outputDir": "/var/www/html/fractals",
       "width": 2560,
       "height": 1440,
-      "maxIter": 512
+      "maxIter": 512,
+      "sshKeyPath": "/home/ubuntu/.ssh/id_rsa"
     },
     "qualityControl": {
       "minColorDiversity": 0.15,
@@ -13,9 +14,8 @@
     "macClients": [
       {
         "name": "Hugh's MacBook",
-        "ip": "192.168.1.100",
-        "username": "hughstevenson",
-        "keyPath": "~/.ssh/id_rsa"
+        "ip": "10.100.96.225",
+        "username": "hughstevenson"
       }
     ]
   }
