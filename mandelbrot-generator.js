@@ -1,16 +1,13 @@
-// mandelbrot-generator.js
 const fs = require('fs');
 const { createCanvas } = require('canvas');
+const { execSync } = require('child_process');
 
-// Configuration
-const CONFIG = {
-  width: 2560,
-  height: 1440,
-  maxIter: 512,
-  outputDir: './mandelbrot_images'
-};
+const config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+const CONFIG = config.server;
+const QUALITY = config.qualityControl;
 
-// Seed regions across the fractal
+// [Keep all your seedRegions and colorPalettes arrays from before]
+
 const seedRegions = [
   { cx: -0.7269, cy: 0.1889, name: "Spiral_Valley" },
   { cx: -0.7453, cy: 0.1127, name: "Elephant_Valley" },
@@ -34,7 +31,6 @@ const seedRegions = [
   { cx: -0.7010, cy: 0.3842, name: "Upper_Valley" }
 ];
 
-// Color palettes
 const colorPalettes = [
   { 
     name: 'Fire_Ice', 
@@ -78,7 +74,6 @@ const colorPalettes = [
   }
 ];
 
-// Interpolate between two colors
 function interpolateColor(c1, c2, t) {
   const ease = t * t * (3 - 2 * t);
   return [
@@ -88,7 +83,6 @@ function interpolateColor(c1, c2, t) {
   ];
 }
 
-// Get color from palette
 function getColorFromPalette(normalized, palette) {
   const position = normalized * (palette.colors.length - 1);
   const index = Math.floor(position);
@@ -101,7 +95,6 @@ function getColorFromPalette(normalized, palette) {
   return interpolateColor(palette.colors[index], palette.colors[index + 1], t);
 }
 
-// Calculate Mandelbrot iterations
 function mandelbrotIterations(x0, y0, maxIter) {
   let x = 0, y = 0, x2 = 0, y2 = 0;
   let iter = 0;
@@ -123,7 +116,6 @@ function mandelbrotIterations(x0, y0, maxIter) {
   return { iter, smooth: smoothIter, inSet: false };
 }
 
-// Find best boundary point
 function findBestBoundaryPoint(cx, cy, searchRadius, samples = 40, maxIter = 256) {
   let bestX = cx, bestY = cy, maxComplexity = 0;
   let foundGoodSpot = false;
@@ -144,7 +136,7 @@ function findBestBoundaryPoint(cx, cy, searchRadius, samples = 40, maxIter = 256
       const complexity = Math.abs(center.iter - right.iter) + 
                         Math.abs(center.iter - down.iter);
       
-      if (complexity > 5) {
+      if (complexity > QUALITY.minComplexityScore) {
         foundGoodSpot = true;
         if (complexity > maxComplexity) {
           maxComplexity = complexity;
@@ -158,112 +150,184 @@ function findBestBoundaryPoint(cx, cy, searchRadius, samples = 40, maxIter = 256
   return { x: bestX, y: bestY, complexity: maxComplexity, foundGood: foundGoodSpot };
 }
 
-// Generate fractal
-async function generateFractal() {
-  console.log('Starting Mandelbrot generation...');
+// NEW: Analyze image quality
+function analyzeImageQuality(imageData, width, height) {
+  const pixels = width * height;
+  const colorBuckets = new Array(256).fill(0);
+  let nonBlackPixels = 0;
   
-  // Random palette and seed
-  const palette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
-  const seed = seedRegions[Math.floor(Math.random() * seedRegions.length)];
-  
-  console.log(`Palette: ${palette.name}, Region: ${seed.name}`);
-  
-  // Start with modest zoom
-  let currentZoom = 10 + Math.random() * 90;
-  let currentX = seed.cx;
-  let currentY = seed.cy;
-  
-  // Progressive zoom
-  const zoomSteps = 3 + Math.floor(Math.random() * 3);
-  
-  for (let step = 0; step < zoomSteps; step++) {
-    const searchRadius = 2.0 / currentZoom;
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const r = imageData.data[i];
+    const g = imageData.data[i + 1];
+    const b = imageData.data[i + 2];
     
-    console.log(`Step ${step + 1}/${zoomSteps}: Scanning at ${currentZoom.toFixed(0)}×`);
+    const brightness = (r + g + b) / 3;
+    colorBuckets[Math.floor(brightness)]++;
     
-    const boundary = findBestBoundaryPoint(currentX, currentY, searchRadius, 35, 256);
-    
-    if (boundary.foundGood && boundary.complexity > 5) {
-      currentX = boundary.x;
-      currentY = boundary.y;
-      currentZoom *= (3 + Math.random() * 7);
-      console.log(`Found complexity: ${boundary.complexity.toFixed(1)}`);
-    } else {
-      console.log('Low complexity - stopping early');
-      break;
+    if (brightness > 15) {
+      nonBlackPixels++;
     }
   }
   
-  console.log(`Final zoom: ${currentZoom.toFixed(0)}×`);
-  console.log(`Rendering ${CONFIG.width}×${CONFIG.height}...`);
+  // Calculate color diversity (how spread out the colors are)
+  const usedBuckets = colorBuckets.filter(count => count > pixels * 0.001).length;
+  const colorDiversity = usedBuckets / 256;
   
-  // Create canvas
-  const canvas = createCanvas(CONFIG.width, CONFIG.height);
-  const ctx = canvas.getContext('2d');
-  const imageData = ctx.createImageData(CONFIG.width, CONFIG.height);
+  // Calculate visible pixel ratio
+  const visibleRatio = nonBlackPixels / pixels;
   
-  const maxIter = Math.min(3072, Math.floor(CONFIG.maxIter * (1 + Math.log10(currentZoom) / 2)));
-  const size = 3.5 / currentZoom;
-  const xMin = currentX - size;
-  const yMin = currentY - size;
-  const xMax = currentX + size;
-  const yMax = currentY + size;
-  
-  // Render
-  let idx = 0;
-  for (let py = 0; py < CONFIG.height; py++) {
-    if (py % 100 === 0) {
-      console.log(`Progress: ${((py / CONFIG.height) * 100).toFixed(1)}%`);
-    }
-    
-    const y0 = yMin + (yMax - yMin) * py / CONFIG.height;
-    
-    for (let px = 0; px < CONFIG.width; px++) {
-      const x0 = xMin + (xMax - xMin) * px / CONFIG.width;
-      
-      const result = mandelbrotIterations(x0, y0, maxIter);
-      
-      let color;
-      if (result.inSet) {
-        color = [0, 0, 5];
-      } else {
-        const normalized = (result.smooth / maxIter) % 1.0;
-        const baseColor = getColorFromPalette(normalized, palette);
-        const brightness = 0.8 + 0.4 * Math.sin(result.smooth * 0.1);
-        
-        color = [
-          Math.min(255, Math.round(baseColor[0] * brightness)),
-          Math.min(255, Math.round(baseColor[1] * brightness)),
-          Math.min(255, Math.round(baseColor[2] * brightness))
-        ];
-      }
-      
-      imageData.data[idx++] = color[0];
-      imageData.data[idx++] = color[1];
-      imageData.data[idx++] = color[2];
-      imageData.data[idx++] = 255;
-    }
-  }
-  
-  ctx.putImageData(imageData, 0, 0);
-  
-  // Save file
-  if (!fs.existsSync(CONFIG.outputDir)) {
-    fs.mkdirSync(CONFIG.outputDir, { recursive: true });
-  }
-  
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `${CONFIG.outputDir}/mandelbrot_${seed.name}_${palette.name}_${currentZoom.toFixed(0)}x_${timestamp}.png`;
-  const filename_1 = `${CONFIG.outputDir}/image_1.png`
-  const filename_2 = `${CONFIG.outputDir}/image_2.png` 
- 
-  const buffer = canvas.toBuffer('image/png');
-  fs.writeFileSync(filename_1, buffer);
-  fs.writeFileSync(filename_2, buffer);
-  console.log(`✓ Saved: ${filename_1}`);
-  console.log(`✓ Saved: ${filename_2}`);
-  console.log('Generation complete!');
+  return {
+    colorDiversity,
+    visibleRatio,
+    usedBuckets,
+    passes: colorDiversity >= QUALITY.minColorDiversity && 
+            visibleRatio >= QUALITY.minVisiblePixels
+  };
 }
 
-// Run
+async function generateFractal() {
+  let attempts = 0;
+  const maxAttempts = 5;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`\n=== Generation Attempt ${attempts}/${maxAttempts} ===`);
+    
+    const palette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+    const seed = seedRegions[Math.floor(Math.random() * seedRegions.length)];
+    
+    console.log(`Palette: ${palette.name}, Region: ${seed.name}`);
+    
+    let currentZoom = 10 + Math.random() * 90;
+    let currentX = seed.cx;
+    let currentY = seed.cy;
+    
+    const zoomSteps = 3 + Math.floor(Math.random() * 3);
+    
+    for (let step = 0; step < zoomSteps; step++) {
+      const searchRadius = 2.0 / currentZoom;
+      const boundary = findBestBoundaryPoint(currentX, currentY, searchRadius, 35, 256);
+      
+      if (boundary.foundGood && boundary.complexity > QUALITY.minComplexityScore) {
+        currentX = boundary.x;
+        currentY = boundary.y;
+        currentZoom *= (3 + Math.random() * 7);
+        console.log(`Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}×`);
+      } else {
+        console.log(`Step ${step + 1}: Low complexity - stopping`);
+        break;
+      }
+    }
+    
+    console.log(`Rendering ${CONFIG.width}×${CONFIG.height}...`);
+    
+    const canvas = createCanvas(CONFIG.width, CONFIG.height);
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(CONFIG.width, CONFIG.height);
+    
+    const maxIter = Math.min(3072, Math.floor(CONFIG.maxIter * (1 + Math.log10(currentZoom) / 2)));
+    const size = 3.5 / currentZoom;
+    const xMin = currentX - size;
+    const yMin = currentY - size;
+    const xMax = currentX + size;
+    const yMax = currentY + size;
+    
+    let idx = 0;
+    for (let py = 0; py < CONFIG.height; py++) {
+      const y0 = yMin + (yMax - yMin) * py / CONFIG.height;
+      
+      for (let px = 0; px < CONFIG.width; px++) {
+        const x0 = xMin + (xMax - xMin) * px / CONFIG.width;
+        const result = mandelbrotIterations(x0, y0, maxIter);
+        
+        let color;
+        if (result.inSet) {
+          color = [0, 0, 5];
+        } else {
+          const normalized = (result.smooth / maxIter) % 1.0;
+          const baseColor = getColorFromPalette(normalized, palette);
+          const brightness = 0.8 + 0.4 * Math.sin(result.smooth * 0.1);
+          
+          color = [
+            Math.min(255, Math.round(baseColor[0] * brightness)),
+            Math.min(255, Math.round(baseColor[1] * brightness)),
+            Math.min(255, Math.round(baseColor[2] * brightness))
+          ];
+        }
+        
+        imageData.data[idx++] = color[0];
+        imageData.data[idx++] = color[1];
+        imageData.data[idx++] = color[2];
+        imageData.data[idx++] = 255;
+      }
+    }
+    
+    // Quality check
+    const quality = analyzeImageQuality(imageData, CONFIG.width, CONFIG.height);
+    console.log(`Quality Check:`);
+    console.log(`  Color Diversity: ${(quality.colorDiversity * 100).toFixed(1)}% (min: ${QUALITY.minColorDiversity * 100}%)`);
+    console.log(`  Visible Pixels: ${(quality.visibleRatio * 100).toFixed(1)}% (min: ${QUALITY.minVisiblePixels * 100}%)`);
+    console.log(`  Used Color Buckets: ${quality.usedBuckets}/256`);
+    
+    if (!quality.passes) {
+      console.log(`❌ Quality check failed - retrying...`);
+      continue;
+    }
+    
+    console.log(`✓ Quality check passed!`);
+    
+    ctx.putImageData(imageData, 0, 0);
+    
+    if (!fs.existsSync(CONFIG.outputDir)) {
+      fs.mkdirSync(CONFIG.outputDir, { recursive: true });
+    }
+    
+    const buffer = canvas.toBuffer('image/png');
+    
+    fs.writeFileSync(`${CONFIG.outputDir}/fractal.png`, buffer);
+    fs.writeFileSync(`${CONFIG.outputDir}/fractal_2.png`, buffer);
+    
+    console.log(`✓ Saved: fractal.png & fractal_2.png`);
+    
+    // Push to Macs
+    pushToMacs(buffer);
+    
+    return;
+  }
+  
+  console.error(`Failed to generate quality image after ${maxAttempts} attempts`);
+  process.exit(1);
+}
+
+function pushToMacs(imageBuffer) {
+  if (!config.macClients || config.macClients.length === 0) {
+    console.log('No Mac clients configured');
+    return;
+  }
+  
+  // Save temp file
+  const tempFile = '/tmp/fractal_push.png';
+  fs.writeFileSync(tempFile, imageBuffer);
+  
+  for (const mac of config.macClients) {
+    console.log(`Pushing to ${mac.name} (${mac.ip})...`);
+    
+    try {
+      // SCP the file to Mac
+      const scpCmd = `scp -i ${mac.keyPath} -o StrictHostKeyChecking=no ${tempFile} ${mac.username}@${mac.ip}:~/fractal.png`;
+      execSync(scpCmd, { stdio: 'inherit' });
+      
+      // Set as wallpaper via SSH
+      const sshCmd = `ssh -i ${mac.keyPath} -o StrictHostKeyChecking=no ${mac.username}@${mac.ip} "osascript -e 'tell application \\"System Events\\" to tell every desktop to set picture to \\"~/fractal.png\\"'"`;
+      execSync(sshCmd, { stdio: 'inherit' });
+      
+      console.log(`✓ Pushed to ${mac.name}`);
+    } catch (error) {
+      console.error(`✗ Failed to push to ${mac.name}:`, error.message);
+    }
+  }
+  
+  fs.unlinkSync(tempFile);
+}
+
 generateFractal().catch(console.error);
