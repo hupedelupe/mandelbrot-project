@@ -4,14 +4,15 @@ set -e
 echo "=== Mandelbrot Deploy Script ==="
 echo "Time: $(date)"
 
-cd /home/ubuntu/mandelbrot-project
+REPO_DIR="/home/ubuntu/mandelbrot-project"
+cd "$REPO_DIR"
 
 # Pull latest code
 echo "Pulling latest code..."
 git pull origin main
 
 # Install dependencies (only if package.json changed)
-if [ package.json -nt node_modules/.installed ]; then
+if [ package.json -nt node_modules/.installed ] || [ ! -f node_modules/.installed ]; then
     echo "Installing dependencies..."
     npm install
     touch node_modules/.installed
@@ -22,15 +23,10 @@ fi
 echo ""
 echo "=== Checking cron job ==="
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-REPO_DIR="$(dirname "$SCRIPT_DIR")"
-GENERATOR_SCRIPT="$SCRIPT_DIR/mandelbrot-generator.sh"
+GENERATOR_SCRIPT="mandelbrot-generator.js"
 
-# Make wallpaper script executable
-chmod +x "$GENERATOR_SCRIPT"
-echo "✓ Made update-wallpaper.sh executable"
-
-CRON_CMD="0 * * * * $GENERATOR_SCRIPT"
+# Cron needs to cd to the repo directory first (for config.json and modules)
+CRON_CMD="0 * * * * cd $REPO_DIR && node $GENERATOR_SCRIPT >> /var/log/mandelbrot.log 2>&1"
 EXISTING_CRON=$(crontab -l 2>/dev/null || true)
 
 # Check if cron already contains the job
@@ -47,8 +43,10 @@ else
 
     echo "✓ Cron job added: $CRON_CMD"
 fi
-# Run generator
-echo "Running generator..."
-node mandelbrot-generator.js
 
+echo ""
+echo "Current crontab:"
+crontab -l | grep mandelbrot || echo "  (none found)"
+
+echo ""
 echo "=== Deploy Complete ==="
