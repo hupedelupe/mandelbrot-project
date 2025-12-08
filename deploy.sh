@@ -26,7 +26,7 @@ echo "=== Checking cron job ==="
 GENERATOR_SCRIPT="mandelbrot-generator.js"
 
 # Cron needs to cd to the repo directory first (for config.json and modules)
-CRON_CMD="0 * * * * cd $REPO_DIR && node $GENERATOR_SCRIPT >> /var/log/mandelbrot.log 2>&1"
+CRON_CMD="0 * * * * cd $REPO_DIR && node $GENERATOR_SCRIPT >> $REPO_DIR/mandelbrot.log 2>&1"
 EXISTING_CRON=$(crontab -l 2>/dev/null || true)
 
 # Check if cron already contains the job
