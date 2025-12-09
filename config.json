@@ -31,7 +31,7 @@
     "comment": "Grid resolution when searching for interesting points. Higher = slower but better"
   },
   "rendering": {
-    "maxIterMultiplier": 100.0,
+    "maxIterMultiplier": 1000.0,
     "comment": "Multiplier for max iterations based on zoom. Higher = more detail but slower",
     
     "colorSmoothing": {

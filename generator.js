@@ -117,7 +117,7 @@ async function generateFractal(config, options = {}) {
     // Use rendering config multiplier if available
     const iterMultiplier = config.rendering?.maxIterMultiplier || 1.0;
     const maxIter = Math.min(
-      10000, 
+      100000, 
       Math.floor(config.server.maxIter * iterMultiplier * (1 + Math.log10(currentZoom) / 2))
     );
     

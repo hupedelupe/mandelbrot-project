@@ -156,7 +156,7 @@ async function main() {
     
     try {
       const result = await generateFractal(config, {
-        maxAttempts: 5,
+        maxAttempts: 10,
         verbose: options.verbose,
         palette: options.palette,
         region: options.region
