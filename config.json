@@ -1,14 +1,76 @@
 {
-    "server": {
-      "outputDir": "/var/www/html/fractals",
-      "width": 2560,
-      "height": 1440,
-      "maxIter": 512,
-      "publicUrl": "http://141.147.117.4/fractals/fractal.png"
+  "server": {
+    "outputDir": "/var/www/html/fractals",
+    "width": 2560,
+    "height": 1440,
+    "maxIter": 512,
+    "publicUrl": "http://141.147.117.4/fractals/fractal.png"
+  },
+  "qualityControl": {
+    "minColorDiversity": 0.5,
+    "minVisiblePixels": 0.7,
+    "minComplexityScore": 300
+  },
+  "generation": {
+    "zoomRange": {
+      "min": 10,
+      "max": 1000,
+      "comment": "Initial zoom level range. Higher = more zoomed in from start"
     },
-    "qualityControl": {
-      "minColorDiversity": 0.15,
-      "minVisiblePixels": 0.20,
-      "minComplexityScore": 8
+    "zoomSteps": {
+      "min": 3,
+      "max": 10,
+      "comment": "Number of zoom iterations. More steps = deeper zoom"
+    },
+    "zoomMultiplier": {
+      "min": 3,
+      "max": 10,
+      "comment": "How much to zoom in each step. Higher = faster zoom"
+    },
+    "searchSamples": 100,
+    "comment": "Grid resolution when searching for interesting points. Higher = slower but better"
+  },
+  "rendering": {
+    "maxIterMultiplier": 100.0,
+    "comment": "Multiplier for max iterations based on zoom. Higher = more detail but slower",
+    
+    "colorSmoothing": {
+      "enabled": true,
+      "brightness": {
+        "base": 0.5,
+        "amplitude": 0.5,
+        "frequency": 0.2,
+        "comment": "Controls color brightness variation. Lower frequency = less grainy"
+      }
+    },
+    
+    "paletteMapping": {
+      "cycleMode": "modulo",
+      "comment": "How colors cycle: 'modulo' (repeat), 'clamp' (stop at end), 'reflect' (bounce back)"
+    },
+    
+    "antiGrain": {
+      "enabled": true,
+      "blendFactor": 0.4,
+      "comment": "Smooths out grainy high-complexity areas by blending with neighbors"
     }
+  },
+  "diversity": {
+    "regionWeights": {
+      "spiral": 1.0,
+      "seahorse": 1.0,
+      "elephant": 1.0,
+      "other": 1.0,
+      "comment": "Adjust these to prefer certain region types. 0 = never pick, 2.0 = twice as likely"
+    },
+    "paletteWeights": {
+      "warm": 1.0,
+      "cool": 1.0,
+      "vibrant": 1.0,
+      "muted": 1.0,
+      "comment": "Same for palettes. Categorize your palettes and adjust weights"
+    },
+    "avoidRecentRegions": 5,
+    "comment": "Remember last N regions and avoid them for variety"
   }
+}

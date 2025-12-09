@@ -1,4 +1,5 @@
 // quality.js - Image quality analysis
+const { mandelbrotIterations } = require('./mandelbrot');
 
 function analyzeImageQuality(imageData, width, height, qualityConfig) {
     const pixels = width * height;
@@ -42,6 +43,64 @@ function analyzeImageQuality(imageData, width, height, qualityConfig) {
     };
   }
   
+  function sampleFractalForQuality(centerX, centerY, zoom, maxIter, config, palette) {
+    const sampleW = 32;
+    const sampleH = 18;
+  
+    const size = 3.5 / zoom;
+    const xMin = centerX - size;
+    const yMin = centerY - size;
+    const xMax = centerX + size;
+    const yMax = centerY + size;
+  
+    let escaped = 0;
+    let smoothMin = Infinity;
+    let smoothMax = -Infinity;
+    let maxIterHits = 0;
+  
+    for (let sy = 0; sy < sampleH; sy++) {
+      const y0 = yMin + (yMax - yMin) * (sy / sampleH);
+  
+      for (let sx = 0; sx < sampleW; sx++) {
+        const x0 = xMin + (xMax - xMin) * (sx / sampleW);
+  
+        const result = mandelbrotIterations(x0, y0, maxIter);
+  
+        if (result.inSet) {
+          maxIterHits++;
+          continue;
+        }
+  
+        escaped++;
+  
+        // track smooth value range
+        if (result.smooth < smoothMin) smoothMin = result.smooth;
+        if (result.smooth > smoothMax) smoothMax = result.smooth;
+      }
+    }
+  
+    const total = sampleW * sampleH;
+    const visibleRatio = escaped / total;
+    const maxIterRatio = maxIterHits / total;
+  
+    // Estimate color diversity using smooth range
+    let colorSpread = 0;
+    if (smoothMin !== Infinity) {
+      colorSpread = (smoothMax - smoothMin) / maxIter;
+    }
+  
+    return {
+      passes:
+        visibleRatio >= config.qualityControl.minVisiblePixels,
+        // colorSpread >= config.qualityControl.minColorDiversity,
+  
+      visibleRatio,
+      maxIterRatio,
+      colorSpread
+    };
+  }
+
   module.exports = {
-    analyzeImageQuality
+    analyzeImageQuality,
+    sampleFractalForQuality
   };
