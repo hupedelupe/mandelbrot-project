@@ -16,21 +16,21 @@
       "comment": "minGeometryScore: 0-1, measures edge density and detail. minActiveCells: out of 25 grid cells (5×5)"
     },
   "generation": {
-    "zoomMax": 9999999999999,
+    "zoomMax": 1e13,
     "zoomRange": {
-      "min": 10,
-      "max": 100,
-      "comment": "Initial zoom level range. Higher = more zoomed in from start"
+      "min": 30,
+      "max": 200,
+      "comment": "Start zooming in moderately so the first frame has texture"
     },
     "zoomSteps": {
-      "min": 3,
-      "max": 10,
-      "comment": "Number of zoom iterations. More steps = deeper zoom"
+      "min": 5,
+      "max": 12,
+      "comment": "More steps = more chance of hitting interesting regions"
     },
     "zoomMultiplier": {
-      "min": 3,
-      "max": 50,
-      "comment": "How much to zoom in each step. Higher = faster zoom"
+      "min": 2.5,
+      "max": 8,
+      "comment": "Balanced zoom speed; reduces risk of precision breakdown"
     },
     "searchSamples": 1000,
     "comment": "Grid resolution when searching for interesting points. Higher = slower but better"
