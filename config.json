@@ -51,7 +51,7 @@
     
     "antiGrain": {
       "enabled": true,
-      "blendFactor": 0.4,
+      "blendFactor": 1,
       "comment": "Smooths out grainy high-complexity areas by blending with neighbors"
     }
   },
