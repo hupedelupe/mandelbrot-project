@@ -117,39 +117,36 @@ async function generateFractal(config, options = {}) {
     // Use rendering config multiplier if available
     const iterMultiplier = config.rendering?.maxIterMultiplier || 1.0;
     const maxIter = Math.min(
-      100000, 
+      10000, 
       Math.floor(config.server.maxIter * iterMultiplier * (1 + Math.log10(currentZoom) / 2))
     );
     
     log(`Max iterations: ${maxIter} (multiplier: ${iterMultiplier})`);
 
-        // QUICK SAMPLING PASS
+    // QUICK SAMPLING PASS - check if image is mostly black before expensive render
     const sample = sampleFractalForQuality(
       currentX,
       currentY,
-      currentZoom,
+      Math.min(currentZoom, config.generation.zoomMax),
       maxIter,
-      config,
-      selectedPalette
+      config.qualityControl,
     );
 
-    log(`Sample Check: visibleRatio=${(sample.visibleRatio*100).toFixed(1)}%  ` +
-        `colorSpread=${(sample.colorSpread*100).toFixed(1)}%  ` +
-        `maxIterRatio=${(sample.maxIterRatio*100).toFixed(1)}%`);
+    log(`Sample Check: Visible Ratio ${(sample.visibleRatio * 100).toFixed(1)}% (min: ${config.qualityControl.minVisiblePixels * 100}%)`);
 
     if (!sample.passes) {
-      log("❌ Sample quality failed — skipping full render.");
-      continue;   // or adjust zoom/position before retrying
+      log(`❌ Sample failed - too much black, skipping render`);
+      continue;
     }
 
-    log("✓ Sample quality passed — continuing to full render...");
+    log(`✓ Sample passed - rendering full image...`);
     
     const { canvas, imageData } = renderFractal(
       config.server.width,
       config.server.height,
       currentX,
       currentY,
-      currentZoom,
+      Math.min(currentZoom, config.generation.zoomMax),
       selectedPalette,
       maxIter,
       config.rendering
@@ -162,17 +159,20 @@ async function generateFractal(config, options = {}) {
       config.server.height,
       config.qualityControl
     );
-    
+
     log(`Quality Check:`);
     log(`  Color Diversity: ${(quality.colorDiversity * 100).toFixed(1)}% (min: ${config.qualityControl.minColorDiversity * 100}%)`);
     log(`  Visible Pixels: ${(quality.visibleRatio * 100).toFixed(1)}% (min: ${config.qualityControl.minVisiblePixels * 100}%)`);
-    log(`  Used Color Buckets: ${quality.usedBuckets}/256`);
-    
+    log(`  Geometry Score: ${(quality.geometryScore * 100).toFixed(1)}% (min: ${(config.qualityControl.minGeometryScore || 0.15) * 100}%)`);
+    log(`  Edge Density: ${(quality.edgeDensity * 100).toFixed(1)}%`);
+    log(`  Active Cells: ${quality.activeCells}/25 (min: ${config.qualityControl.minActiveCells || 8})`);
+    log(`  Spatial Distribution: ${(quality.spatialDistribution * 100).toFixed(1)}%`);
+
     if (!quality.passes) {
       log(`❌ Quality check failed - retrying...`);
       continue;
     }
-    
+
     log(`✓ Quality check passed!`);
     
     return {
