@@ -7,11 +7,14 @@ const { mandelbrotIterations } = require('./mandelbrot');
  * High edge density = lots of geometric detail
  */
 function detectEdgeDensity(imageData, width, height) {
+  const startRow = Math.floor(height / 3);
+  const endRow = Math.floor((2 * height) / 3);
+
   let edgeCount = 0;
   const threshold = 30; // Brightness difference threshold
   
   // Sample every 4th pixel for speed
-  for (let py = 2; py < height - 2; py += 4) {
+  for (let py = startRow + 2; py < endRow - 2; py += 4) {
     for (let px = 2; px < width - 2; px += 4) {
       const i = (py * width + px) * 4;
       const centerBrightness = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
@@ -32,7 +35,7 @@ function detectEdgeDensity(imageData, width, height) {
     }
   }
   
-  const sampledPixels = ((height - 4) / 4) * ((width - 4) / 4);
+  const sampledPixels = ((endRow - startRow - 4) / 4) * ((width - 4) / 4);
   return edgeCount / sampledPixels;
 }
 
@@ -41,9 +44,12 @@ function detectEdgeDensity(imageData, width, height) {
  * Good images have detail spread across the frame, not just in corners
  */
 function detectSpatialDistribution(imageData, width, height) {
+  const startRow = Math.floor(height / 3);
+  const endRow = Math.floor((2 * height) / 3);
+  const cropHeight = endRow - startRow;
   const gridSize = 5; // Divide image into 5x5 grid
   const cellWidth = Math.floor(width / gridSize);
-  const cellHeight = Math.floor(height / gridSize);
+  const cellHeight = Math.floor(cropHeight / gridSize);
   
   const cellActivity = [];
   
@@ -53,9 +59,9 @@ function detectSpatialDistribution(imageData, width, height) {
       let cellSamples = 0;
       
       const startX = gx * cellWidth;
-      const startY = gy * cellHeight;
+      const startY = startRow + (gy * cellHeight);
       const endX = Math.min((gx + 1) * cellWidth, width);
-      const endY = Math.min((gy + 1) * cellHeight, height);
+      const endY = Math.min(startRow + ((gy + 1) * cellHeight), endRow);
       
       // Sample every 8th pixel in this cell
       for (let py = startY; py < endY; py += 8) {
@@ -145,7 +151,7 @@ function analyzeImageQuality(imageData, width, height, qualityConfig) {
     geometryScore >= (qualityConfig.minGeometryScore || 0.15) &&
     spatial.activeCells >= (qualityConfig.minActiveCells || 8) && // At least 8 of 25 cells active
     edgeDensity >= (qualityConfig.minEdgeDensity);
-    
+
   return {
     colorDiversity,
     visibleRatio,

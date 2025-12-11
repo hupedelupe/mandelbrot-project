@@ -7,16 +7,16 @@
     "publicUrl": "http://141.147.117.4/fractals/fractal.png"
   },
   "qualityControl": {
-      "minColorDiversity": 0.15,
-      "minVisiblePixels": 0.4,
+      "minColorDiversity": 0.3,
+      "minVisiblePixels": 0.5,
       "minComplexityScore": 8,
-      "minGeometryScore": 0.15,
+      "minGeometryScore": 0.30,
       "minActiveCells": 8,
       "minEdgeDensity":0.12,
       "comment": "minGeometryScore: 0-1, measures edge density and detail. minActiveCells: out of 25 grid cells (5×5)"
     },
   "generation": {
-    "zoomMax": 1e13,
+    "zoomMax": 1e12,
     "zoomRange": {
       "min": 30,
       "max": 200,
@@ -32,7 +32,7 @@
       "max": 8,
       "comment": "Balanced zoom speed; reduces risk of precision breakdown"
     },
-    "searchSamples": 1000,
+    "searchSamples": 200,
     "comment": "Grid resolution when searching for interesting points. Higher = slower but better"
   },
   "rendering": {
