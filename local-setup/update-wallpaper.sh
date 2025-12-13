@@ -10,8 +10,8 @@ IMAGE_DIR="$PROJECT_DIR/images"
 mkdir -p "$IMAGE_DIR"
 
 # Download fractals
-curl -s -o "$IMAGE_DIR/fractal.png"     http://141.147.117.4/fractals/fractal.png
-curl -s -o "$IMAGE_DIR/fractal_2.png"   http://141.147.117.4/fractals/fractal_2.png
+curl -s -o "$IMAGE_DIR/fractal.png"     http://141.147.117.4/fractals/fractal_desktop.png
+curl -s -o "$IMAGE_DIR/fractal_2.png"   http://141.147.117.4/fractals/fractal_desktop.png
 
 # Output first image path for Shortcuts input
 echo "$IMAGE_DIR/fractal.png"
