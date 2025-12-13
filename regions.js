@@ -41,7 +41,7 @@ const seedRegions = [
     cx: -0.1011,
     cy: 0.9563,
     name: "Seahorse_Tail",
-    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.18, minActiveCells: 7, minColorDiversity: 0.1, minComplexityScore: 0 }
+    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.01, minGeometryScore: 0.18, minActiveCells: 7, minColorDiversity: 0.1, minComplexityScore: 0 }
   },
   {
     cx: -0.7500,

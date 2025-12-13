@@ -6,6 +6,7 @@ const path = require('path');
 const { generateFractal, saveFractal } = require('./generator');
 const { colorPalettes } = require('./palettes');
 const { seedRegions } = require('./regions');
+const { generateDeviceCrops } = require('./dynamic-framing');
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -156,12 +157,19 @@ async function main() {
     
     try {
       const result = await generateFractal(config, {
-        maxAttempts: 10,
+        maxAttempts: 5,
         verbose: options.verbose,
         palette: options.palette,
         region: options.region
       });
       
+      const crops = generateDeviceCrops({
+        imageData: result.imageData,
+        width: config.server.width,
+        height: config.server.height,
+        qualityConfig: config.qualityControl
+      });
+
       if (options.testMode) {
         // TEST MODE: Save with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -181,18 +189,21 @@ async function main() {
         });
       } else {
         // PRODUCTION MODE: Save as fractal.png AND fractal_2.png
-        const filepath1 = saveFractal(result.canvas, outputDir, 'fractal');
-        const filepath2 = saveFractal(result.canvas, outputDir, 'fractal_2');
-        
-        if (options.verbose) {
-          console.log(`✓ Saved: ${filepath1}`);
-          console.log(`✓ Saved: ${filepath2}`);
+        // const filepath1 = saveFractal(result.canvas, outputDir, 'fractal');
+        // const filepath2 = saveFractal(result.canvas, outputDir, 'fractal_2');
+        for (const crop of crops) {
+          let filepath = saveFractal(crop.canvas, outputDir, `fractal_${crop.name}`);
+          if (options.verbose) {
+            console.log(`✓ Saved: ${filepath}`);
+        }
+
+          // console.log(`✓ Saved: ${filepath2}`);
         }
         
-        results.push({
-          files: [filepath1, filepath2],
-          metadata: result.metadata
-        });
+        // results.push({
+        //   files: [filepath1, filepath2],
+        //   metadata: result.metadata
+        // });
       }
       
     } catch (err) {

@@ -133,6 +133,30 @@ async function generateFractal(config, options = {}) {
         break;
       }
     }
+
+    // refine zoom
+    for (let stepInner = 0; stepInner < 4; stepInner++) {
+      const searchRadiusInner = 1.0 / currentZoom;
+      const boundaryInner = findBestBoundaryPoint(
+        currentX, 
+        currentY, 
+        searchRadiusInner, 
+        searchSamples, 
+        512,
+        qualityConfig.minComplexityScore
+      );
+      
+      if (boundaryInner.foundGood && boundaryInner.complexity > qualityConfig.minComplexityScore) {
+        currentX = boundaryInner.x;
+        currentY = boundaryInner.y;
+        const zoomMultInner = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
+        currentZoom += zoomMultInner;
+        log(`Step ${stepInner + 1}: Complexity ${boundaryInner.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMultInner.toFixed(1)}× mult)`);
+      } else {
+        log(`Step ${stepInner + 1}: Low complexity - stopping`);
+        break;
+      }
+    }
     
     log(`Rendering ${config.server.width}×${config.server.height}...`);
     
@@ -148,21 +172,37 @@ async function generateFractal(config, options = {}) {
       qualityConfig,
     );
 
+    function visibilityScalar(visFactor) {
+      // Clamp for safety
+      const x = Math.max(0, Math.min(1, visFactor));
+      return Math.pow(x, 6) * Math.exp(x - 1);
+    }
+    
     const samplePixels = 48 * 27;
     const fullPixels = config.server.width * config.server.height;
-    
-    // Base scaling from sample iterations
-    let scaledMaxIter = Math.floor((sample.totalIterations / samplePixels) * fullPixels);
+  
     
     // Visibility factor (1 = full iterations, low visibility = aggressive clamp)
     // Linear scaling: minVisiblePixels → 10% of max, 1.0 → 100% of scaledMaxIter
     const minVisible = config.qualityControl.minVisiblePixels || 0.1;
     const visFactor = Math.max(0.1, (sample.visibleRatio - minVisible) / (1 - minVisible));
+    const visScalar = visibilityScalar(visFactor);
+
+    const baseMaxIter = Math.floor(
+      config.server.maxIter *
+      iterMultiplier *
+      (1 + Math.log10(currentZoom) / 2)
+    );
+
+    const maxIter = Math.max(
+      64, // hard floor so image doesn't die
+      Math.floor(baseMaxIter * visScalar)
+    );
+
+    // scaledMaxIter = Math.floor(scaledMaxIter * visFactor);
     
-    scaledMaxIter = Math.floor(scaledMaxIter * visFactor);
-    
-    // Clamp to server maxIter * multiplier
-    const maxIter = Math.min(scaledMaxIter, Math.floor(config.server.maxIter * iterMultiplier));
+    // // Clamp to server maxIter * multiplier
+    // const maxIter = Math.min(scaledMaxIter, Math.floor(config.server.maxIter * iterMultiplier));
     
     console.log(`Sample Check: Visible Ratio ${(sample.visibleRatio*100).toFixed(1)}%, setting maxIter = ${maxIter}`);
 

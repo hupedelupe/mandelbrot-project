@@ -24,23 +24,29 @@ function mandelbrotIterations(x0, y0, maxIter) {
   function findBestBoundaryPoint(cx, cy, searchRadius, samples = 40, maxIter = 256, minComplexity = 15) {
     let bestX = cx, bestY = cy, maxComplexity = 0;
     let foundGoodSpot = false;
-    
+  
     for (let sy = 0; sy < samples; sy++) {
       for (let sx = 0; sx < samples; sx++) {
         const x = cx + (sx / samples - 0.5) * searchRadius * 2;
         const y = cy + (sy / samples - 0.5) * searchRadius * 2;
-        
+  
         const center = mandelbrotIterations(x, y, maxIter);
-        
         if (center.inSet || center.iter < 8) continue;
-        
+  
+        // Measure complexity using 4-neighbor differences (more sensitive)
         const delta = searchRadius / samples;
         const right = mandelbrotIterations(x + delta, y, maxIter);
+        const left = mandelbrotIterations(x - delta, y, maxIter);
+        const up = mandelbrotIterations(x, y - delta, maxIter);
         const down = mandelbrotIterations(x, y + delta, maxIter);
-        
-        const complexity = Math.abs(center.iter - right.iter) + 
-                          Math.abs(center.iter - down.iter);
-        
+  
+        // Weighted complexity: favors sharper gradients (spirals)
+        const complexity = 
+          Math.abs(center.iter - right.iter) +
+          Math.abs(center.iter - left.iter) +
+          Math.abs(center.iter - up.iter) +
+          Math.abs(center.iter - down.iter);
+  
         if (complexity > minComplexity) {
           foundGoodSpot = true;
           if (complexity > maxComplexity) {
@@ -51,7 +57,7 @@ function mandelbrotIterations(x0, y0, maxIter) {
         }
       }
     }
-    
+  
     return { x: bestX, y: bestY, complexity: maxComplexity, foundGood: foundGoodSpot };
   }
   

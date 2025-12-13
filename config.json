@@ -1,8 +1,8 @@
 {
   "server": {
     "outputDir": "/var/www/html/fractals",
-    "width": 2560,
-    "height": 1440,
+    "width": 4096,
+    "height": 4096,
     "maxIter": 2048,
     "publicUrl": "http://141.147.117.4/fractals/fractal.png"
   },
@@ -32,7 +32,7 @@
       "max": 6,
       "comment": "Lower max prevents overshooting"
     },
-    "searchSamples": 200,
+    "searchSamples": 100,
     "comment": "High sampling for good boundary detection"
   },
   "rendering": {
@@ -42,8 +42,8 @@
     "colorSmoothing": {
       "enabled": true,
       "brightness": {
-        "base": 0.7,
-        "amplitude": 0.5,
+        "base": 0.8,
+        "amplitude": 0.6,
         "frequency": 0.05,
         "comment": "Higher frequency = more color detail and variation"
       }
@@ -56,7 +56,7 @@
     
     "antiGrain": {
       "enabled": true,
-      "blendFactor": 0.3,
+      "blendFactor": 0.4,
       "comment": "Light smoothing to reduce banding but keep detail"
     }
   },
