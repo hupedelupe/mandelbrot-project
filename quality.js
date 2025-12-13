@@ -181,6 +181,7 @@ function sampleFractalForQuality(centerX, centerY, zoom, maxIter, qualityConfig)
 
   let escaped = 0;
   let maxIterHits = 0;
+  let totalIterations = 0;
 
   for (let sy = 0; sy < sampleH; sy++) {
     const y0 = yMin + (yMax - yMin) * (sy / sampleH);
@@ -190,6 +191,7 @@ function sampleFractalForQuality(centerX, centerY, zoom, maxIter, qualityConfig)
 
       const result = mandelbrotIterations(x0, y0, maxIter);
 
+      totalIterations += result.iter; // use 'iter' returned by mandelbrotIterations
       if (result.inSet) {
         maxIterHits++;
       } else {
@@ -200,14 +202,15 @@ function sampleFractalForQuality(centerX, centerY, zoom, maxIter, qualityConfig)
 
   const total = sampleW * sampleH;
   const visibleRatio = escaped / total;
-
   const passes = visibleRatio >= qualityConfig.minVisiblePixels;
 
   return {
     passes,
-    visibleRatio
+    visibleRatio,
+    totalIterations // total iterations performed in sample
   };
 }
+
 
 module.exports = {
   analyzeImageQuality,

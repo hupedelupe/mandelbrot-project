@@ -3,61 +3,61 @@
     "outputDir": "/var/www/html/fractals",
     "width": 2560,
     "height": 1440,
-    "maxIter": 512,
+    "maxIter": 2048,
     "publicUrl": "http://141.147.117.4/fractals/fractal.png"
   },
   "qualityControl": {
       "minColorDiversity": 0.3,
-      "minVisiblePixels": 0.5,
-      "minComplexityScore": 8,
+      "minVisiblePixels": 0.7,
+      "minComplexityScore": 0,
       "minGeometryScore": 0.30,
       "minActiveCells": 8,
-      "minEdgeDensity":0.12,
+      "minEdgeDensity": 0.1,
       "comment": "minGeometryScore: 0-1, measures edge density and detail. minActiveCells: out of 25 grid cells (5×5)"
     },
   "generation": {
-    "zoomMax": 1e12,
+    "zoomMax": 1e10,
     "zoomRange": {
-      "min": 30,
-      "max": 200,
-      "comment": "Start zooming in moderately so the first frame has texture"
+      "min": 20,
+      "max": 150,
+      "comment": "Broader starting range"
     },
     "zoomSteps": {
-      "min": 5,
+      "min": 3,
       "max": 12,
-      "comment": "More steps = more chance of hitting interesting regions"
+      "comment": "Wider step range = more depth variety"
     },
     "zoomMultiplier": {
-      "min": 2.5,
-      "max": 8,
-      "comment": "Balanced zoom speed; reduces risk of precision breakdown"
+      "min": 2,
+      "max": 6,
+      "comment": "Lower max prevents overshooting"
     },
     "searchSamples": 200,
-    "comment": "Grid resolution when searching for interesting points. Higher = slower but better"
+    "comment": "High sampling for good boundary detection"
   },
   "rendering": {
-    "maxIterMultiplier": 1000.0,
-    "comment": "Multiplier for max iterations based on zoom. Higher = more detail but slower",
+    "maxIterMultiplier": 10,
+    "comment": "Higher = more detail and color variation",
     
     "colorSmoothing": {
       "enabled": true,
       "brightness": {
-        "base": 0.5,
+        "base": 0.7,
         "amplitude": 0.5,
-        "frequency": 0.1,
-        "comment": "Controls color brightness variation. Lower frequency = less grainy"
+        "frequency": 0.05,
+        "comment": "Higher frequency = more color detail and variation"
       }
     },
     
     "paletteMapping": {
       "cycleMode": "modulo",
-      "comment": "How colors cycle: 'modulo' (repeat), 'clamp' (stop at end), 'reflect' (bounce back)"
+      "comment": "Back to modulo for full color range"
     },
     
     "antiGrain": {
       "enabled": true,
-      "blendFactor": 1,
-      "comment": "Smooths out grainy high-complexity areas by blending with neighbors"
+      "blendFactor": 0.3,
+      "comment": "Light smoothing to reduce banding but keep detail"
     }
   },
   "diversity": {
@@ -77,5 +77,16 @@
     },
     "avoidRecentRegions": 5,
     "comment": "Remember last N regions and avoid them for variety"
+  },
+  "fractalVariety": {
+    "enabled": true,
+    "weights": {
+      "mandelbrot": 0.75,
+      "burningShip": 0.10,
+      "multibrot3": 0.08,
+      "multibrot4": 0.05,
+      "tricorn": 0.02
+    },
+    "comment": "75% classic, 10% burning ship, 8% cubic, 5% quartic, 2% tricorn"
   }
 }
