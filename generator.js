@@ -5,7 +5,7 @@ const { findBestBoundaryPoint } = require('./mandelbrot');
 const { getRandomPalette, getPaletteByName } = require('./palettes');
 const { getRandomRegion, getRegionByName, seedRegions } = require('./regions');
 const { analyzeImageQuality, sampleFractalForQuality } = require('./quality');
-const { renderFractal } = require('./renderer');
+
 
 // Track recently used regions for variety
 const recentRegions = [];
@@ -47,30 +47,29 @@ function selectRegion(config, regionName = null) {
   return selected;
 }
 
-function computeMaxIter(config, iterMultiplier, currentZoom, visibleRatio) {
-  const baseMaxIter = config.server.maxIter; // e.g., 2048
-  const minIter = 10000;
+// function computeMaxIter(config, iterMultiplier, currentZoom, visibleRatio) {
+//   const baseMaxIter = config.server.maxIter; // e.g., 2048
+//   const minIter = 10000;
 
-  // Scale zoom into normal multiplier
-  const zoomFactor = 1 + Math.log10(currentZoom) / 2;
+//   // Scale zoom into normal multiplier
+//   const zoomFactor = 1 + Math.log10(currentZoom) / 2;
 
-  // Compute nominal max, capped to reasonable value
-  const nominalMax = Math.floor(baseMaxIter * iterMultiplier * zoomFactor);
+//   // Compute nominal max, capped to reasonable value
+//   const nominalMax = Math.floor(baseMaxIter * iterMultiplier * zoomFactor);
 
-  // If image is sparse, scale linearly toward minIter
-  const clampedRatio = Math.min(Math.max(visibleRatio, 0), 1);
-  const scaledMaxIter = Math.floor(minIter + clampedRatio * (nominalMax - minIter));
+//   // If image is sparse, scale linearly toward minIter
+//   const clampedRatio = Math.min(Math.max(visibleRatio, 0), 1);
+//   const scaledMaxIter = Math.floor(minIter + clampedRatio * (nominalMax - minIter));
 
-  // Optional: clamp maxIter to a hard ceiling if needed
-  const ceiling = 10000; 
-  return Math.min(scaledMaxIter, ceiling);
-}
+//   // Optional: clamp maxIter to a hard ceiling if needed
+//   const ceiling = 10000; 
+//   return Math.min(scaledMaxIter, ceiling);
+// }
 
 
 
 async function generateFractal(config, options = {}) {
   const {
-    attemptNumber = 1,
     maxAttempts = 10,
     verbose = true,
     palette = null,
@@ -94,24 +93,28 @@ async function generateFractal(config, options = {}) {
     
     log(`Palette: ${selectedPalette.name}, Region: ${selectedRegion.name}`);
     
-    // Use generation config if available
+    // Config
     const genConfig = config.generation || {};
+    const qualityConfig = config.qualityControl;
     const zoomMin = genConfig.zoomRange?.min || 10;
     const zoomMax = genConfig.zoomRange?.max || 100;
     const zoomStepsMin = genConfig.zoomSteps?.min || 3;
-    const zoomStepsMax = genConfig.zoomSteps?.max || 5;
-    const zoomMultMin = genConfig.zoomMultiplier?.min || 3;
-    const zoomMultMax = genConfig.zoomMultiplier?.max || 10;
-    const searchSamples = genConfig.searchSamples || 35;
-    const qualityConfig = selectedRegion.qualityControl;
+    const zoomStepsMax = genConfig.zoomSteps?.max || 8;
+    const zoomMultMin = genConfig.zoomMultiplier?.min || 2;
+    const zoomMultMax = genConfig.zoomMultiplier?.max || 6;
+    const searchSamples = genConfig.searchSamples || 200;
     
     let currentZoom = zoomMin + Math.random() * (zoomMax - zoomMin);
     let currentX = selectedRegion.cx;
     let currentY = selectedRegion.cy;
     
-    const zoomSteps = zoomStepsMin + Math.floor(Math.random() * (zoomStepsMax - zoomStepsMin + 1));
+    // ============================================
+    // PHASE 1: BROAD ZOOM - Find the boundary
+    // ============================================
+    const broadSteps = zoomStepsMin + Math.floor(Math.random() * (zoomStepsMax - zoomStepsMin + 1));
     
-    for (let step = 0; step < zoomSteps; step++) {
+    log(`Phase 1: Broad zoom to boundary (${broadSteps} steps)`);
+    for (let step = 0; step < broadSteps; step++) {
       const searchRadius = 2.0 / currentZoom;
       const boundary = findBestBoundaryPoint(
         currentX, 
@@ -119,7 +122,7 @@ async function generateFractal(config, options = {}) {
         searchRadius, 
         searchSamples, 
         256,
-        qualityConfig.minComplexityScore
+        qualityConfig.minComplexityScore || 0
       );
       
       if (boundary.foundGood) {
@@ -127,136 +130,90 @@ async function generateFractal(config, options = {}) {
         currentY = boundary.y;
         const zoomMult = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
         currentZoom *= zoomMult;
-        log(`Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMult.toFixed(1)}× mult)`);
+        log(`  Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}×`);
       } else {
-        log(`Step ${step + 1}: Low complexity - stopping`);
+        log(`  Step ${step + 1}: Low complexity - stopping broad zoom`);
         break;
       }
     }
 
-    // refine zoom
-    for (let stepInner = 0; stepInner < 100; stepInner++) {
-      const searchRadiusInner = 1.0 / currentZoom;
-      const boundaryInner = findBestBoundaryPoint(
+    // ============================================
+    // PHASE 2: PRECISE ZOOM - Center on beauty
+    // ============================================
+    const preciseSteps = 3 + Math.floor(Math.random() * 4); // 3-6 precise steps
+    const preciseZoomMult = 1.3; // Much slower zoom
+    
+    log(`Phase 2: Precise zoom into detail (${preciseSteps} steps)`);
+    for (let step = 0; step < preciseSteps; step++) {
+      const searchRadius = (0.8 / currentZoom) / (step + 1); // Shrinking search
+      const boundary = findBestBoundaryPoint(
         currentX, 
         currentY, 
-        searchRadiusInner, 
-        searchSamples, 
-        512,
-        qualityConfig.minComplexityScore
+        searchRadius, 
+        Math.floor(searchSamples * 1.5), // More precise sampling
+        512, // Higher iterations to see fine detail
+        qualityConfig.minComplexityScore * 0.7 || 0 // More lenient
       );
       
-      if (boundaryInner.foundGood && boundaryInner.complexity > qualityConfig.minComplexityScore) {
-        currentX = boundaryInner.x;
-        currentY = boundaryInner.y;
-        const zoomMultInner = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
-        currentZoom += zoomMultInner;
-        if ((stepInner + 1) % 10 == 0) {
-          log(`Step ${stepInner + 1}: Complexity ${boundaryInner.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMultInner.toFixed(1)}× mult)`);
-        }
+      if (boundary.foundGood) {
+        currentX = boundary.x;
+        currentY = boundary.y;
+        currentZoom *= preciseZoomMult;
+        log(`  Refine ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}×`);
       } else {
-        log(`Step ${stepInner + 1}: Low complexity - stopping`);
+        log(`  Refine ${step + 1}: No improvement - stopping precise zoom`);
         break;
       }
     }
-    
-    log(`Rendering ${config.server.width}×${config.server.height}...`);
-    
-    // Use rendering config multiplier if available
-    const iterMultiplier = config.rendering?.maxIterMultiplier || 1.0;
 
-    // QUICK SAMPLING PASS
+    // Cap zoom at safe limit
+    if (currentZoom > genConfig.zoomMax) {
+      log(`⚠️  Capping zoom from ${currentZoom.toFixed(0)}× to ${genConfig.zoomMax}×`);
+      currentZoom = genConfig.zoomMax;
+    }
+
+    // ============================================
+    // VISIBILITY CHECK - Skip if too much black
+    // ============================================
+    const baseMaxIter = config.server.maxIter || 20480;
+    const zoomIterBoost = 1 + Math.log10(currentZoom) / 2;
+    const maxIter = Math.floor(baseMaxIter * zoomIterBoost);
+    
     const sample = sampleFractalForQuality(
       currentX,
       currentY,
-      Math.min(currentZoom, config.generation.zoomMax),
-      10000,
-      qualityConfig,
-    );
-
-    function visibilityScalar(visFactor) {
-      // Clamp for safety
-      const x = Math.max(0, Math.min(1, visFactor));
-      return Math.pow(x, 6) * Math.exp(x - 1);
-    }
-    
-    const samplePixels = 48 * 27;
-    const fullPixels = config.server.width * config.server.height;
-  
-    
-    // Visibility factor (1 = full iterations, low visibility = aggressive clamp)
-    // Linear scaling: minVisiblePixels → 10% of max, 1.0 → 100% of scaledMaxIter
-    const minVisible = config.qualityControl.minVisiblePixels || 0.1;
-    const visFactor = Math.max(0.1, (sample.visibleRatio - minVisible) / (1 - minVisible));
-    const visScalar = visibilityScalar(visFactor);
-
-    const baseMaxIter = Math.floor(
-      config.server.maxIter *
-      iterMultiplier *
-      (1 + Math.log10(currentZoom) / 2)
-    );
-
-    const maxIter = Math.max(
-      64, // hard floor so image doesn't die
-      Math.floor(baseMaxIter * visScalar)
-    );
-
-    // scaledMaxIter = Math.floor(scaledMaxIter * visFactor);
-    
-    // // Clamp to server maxIter * multiplier
-    // const maxIter = Math.min(scaledMaxIter, Math.floor(config.server.maxIter * iterMultiplier));
-    
-    console.log(`Sample Check: Visible Ratio ${(sample.visibleRatio*100).toFixed(1)}%, setting maxIter = ${maxIter}`);
-
-
-    log(`Max iterations: ${maxIter} (multiplier: ${iterMultiplier})`);
-
-    log(`Sample Check: Visible Ratio ${(sample.visibleRatio * 100).toFixed(1)}% (min: ${qualityConfig.minVisiblePixels * 100}%)`);
-
-    if (!sample.passes) {
-      log(`❌ Sample failed - too much black, skipping render`);
-      continue;
-    }
-
-    log(`✓ Sample passed - rendering full image...`);
-    
-    const { canvas, imageData } = renderFractal(
-      config.server.width,
-      config.server.height,
-      currentX,
-      currentY,
-      Math.min(currentZoom, config.generation.zoomMax),
-      selectedPalette,
+      currentZoom,
       maxIter,
-      config.rendering
-    );
-    
-    // Quality check
-    const quality = analyzeImageQuality(
-      imageData, 
-      config.server.width, 
-      config.server.height,
       qualityConfig
     );
 
-    log(`Quality Check:`);
-    log(`  Color Diversity: ${(quality.colorDiversity * 100).toFixed(1)}% (min: ${qualityConfig.minColorDiversity * 100}%)`);
-    log(`  Visible Pixels: ${(quality.visibleRatio * 100).toFixed(1)}% (min: ${qualityConfig.minVisiblePixels * 100}%)`);
-    log(`  Geometry Score: ${(quality.geometryScore * 100).toFixed(1)}% (min: ${(qualityConfig.minGeometryScore || 0.15) * 100}%)`);
-    log(`  Edge Density: ${(quality.edgeDensity * 100).toFixed(1)}%`);
-    log(`  Active Cells: ${quality.activeCells}/25 (min: ${qualityConfig.minActiveCells || 8})`);
-    log(`  Spatial Distribution: ${(quality.spatialDistribution * 100).toFixed(1)}%`);
+    log(`Visibility check: ${(sample.visibleRatio * 100).toFixed(1)}% visible (need ${(qualityConfig.minVisiblePixels * 100).toFixed(0)}%-95%)`);
 
-    if (!quality.passes) {
-      log(`❌ Quality check failed - retrying...`);
+    if (!sample.passes) {
+      if (sample.visibleRatio < qualityConfig.minVisiblePixels) {
+        log(`❌ Too much black (${((1 - sample.visibleRatio) * 100).toFixed(1)}% in-set)`);
+      } else {
+        log(`❌ Zoomed into exterior (everything escapes)`);
+      }
       continue;
     }
 
-    log(`✓ Quality check passed!`);
+    log(`✓ Visibility passed - generating crops...`);
+
+    // ============================================
+    // RENDER CROPS - No quality check needed
+    // ============================================
     
+    // Return fractal parameters for crop rendering
     return {
-      canvas,
-      imageData,
+      fractalParams: {
+        centerX: currentX,
+        centerY: currentY,
+        zoom: currentZoom,
+        palette: selectedPalette,
+        maxIter,
+        renderConfig: config.rendering
+      },
       metadata: {
         palette: selectedPalette.name,
         region: selectedRegion.name,
@@ -264,7 +221,7 @@ async function generateFractal(config, options = {}) {
         centerX: currentX,
         centerY: currentY,
         maxIter,
-        quality
+        visibleRatio: sample.visibleRatio
       }
     };
   }

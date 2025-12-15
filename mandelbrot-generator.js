@@ -7,6 +7,7 @@ const { generateFractal, saveFractal } = require('./generator');
 const { colorPalettes } = require('./palettes');
 const { seedRegions } = require('./regions');
 const { generateDeviceCrops } = require('./dynamic-framing');
+const { renderFractal } = require('./renderer');
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -157,53 +158,81 @@ async function main() {
     
     try {
       const result = await generateFractal(config, {
-        maxAttempts: 5,
+        maxAttempts: 10,
         verbose: options.verbose,
         palette: options.palette,
         region: options.region
       });
       
-      const crops = generateDeviceCrops({
-        imageData: result.imageData,
-        width: config.server.width,
-        height: config.server.height,
-        qualityConfig: config.qualityControl
-      });
+      // generateFractal now returns fractal params, not a rendered canvas
+      // We need to render crops directly at their native resolutions
+      
+      const crops = [
+        { name: 'desktop', width: 2560, height: 1440 },
+        { name: 'mobile', width: 1440, height: 2560 }
+      ];
+      
+      const renderedCrops = [];
+      
+      for (const crop of crops) {
+        if (options.verbose) {
+          console.log(`Rendering ${crop.name} crop at ${crop.width}×${crop.height}...`);
+        }
+        
+        const { canvas, imageData } = renderFractal(
+          crop.width,
+          crop.height,
+          result.fractalParams.centerX,
+          result.fractalParams.centerY,
+          result.fractalParams.zoom,
+          result.fractalParams.palette,
+          result.fractalParams.maxIter,
+          result.fractalParams.renderConfig
+        );
+        
+        renderedCrops.push({
+          name: crop.name,
+          canvas,
+          imageData
+        });
+      }
 
       if (options.testMode) {
         // TEST MODE: Save with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const filename = `fractal_${timestamp}_${i + 1}`;
-        const filepath = saveFractal(result.canvas, outputDir, filename);
+        
+        for (const crop of renderedCrops) {
+          const filename = `fractal_${crop.name}_${timestamp}_${i + 1}`;
+          const filepath = saveFractal(crop.canvas, outputDir, filename);
+          
+          if (options.verbose) {
+            console.log(`✓ Saved: ${filepath}`);
+          }
+        }
         
         if (options.verbose) {
-          console.log(`✓ Saved: ${filepath}`);
           console.log(`  Palette: ${result.metadata.palette}`);
           console.log(`  Region: ${result.metadata.region}`);
           console.log(`  Zoom: ${result.metadata.zoom.toFixed(2)}×`);
         }
         
         results.push({
-          file: filepath,
+          files: renderedCrops.map(c => `${outputDir}/fractal_${c.name}_${timestamp}_${i + 1}.png`),
           metadata: result.metadata
         });
       } else {
-        // PRODUCTION MODE: Save as fractal.png AND fractal_2.png
-        // const filepath1 = saveFractal(result.canvas, outputDir, 'fractal');
-        // const filepath2 = saveFractal(result.canvas, outputDir, 'fractal_2');
-        for (const crop of crops) {
-          let filepath = saveFractal(crop.canvas, outputDir, `fractal_${crop.name}`);
+        // PRODUCTION MODE: Save as fractal_desktop.png and fractal_mobile.png
+        for (const crop of renderedCrops) {
+          const filepath = saveFractal(crop.canvas, outputDir, `fractal_${crop.name}`);
           if (options.verbose) {
             console.log(`✓ Saved: ${filepath}`);
-        }
-
-          // console.log(`✓ Saved: ${filepath2}`);
+          }
         }
         
-        // results.push({
-        //   files: [filepath1, filepath2],
-        //   metadata: result.metadata
-        // });
+        results.push({
+          files: renderedCrops.map(c => `${outputDir}/fractal_${c.name}.png`),
+          metadata: result.metadata
+        });
       }
       
     } catch (err) {
