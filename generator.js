@@ -122,7 +122,7 @@ async function generateFractal(config, options = {}) {
         qualityConfig.minComplexityScore
       );
       
-      if (boundary.foundGood && boundary.complexity > qualityConfig.minComplexityScore) {
+      if (boundary.foundGood) {
         currentX = boundary.x;
         currentY = boundary.y;
         const zoomMult = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
@@ -135,7 +135,7 @@ async function generateFractal(config, options = {}) {
     }
 
     // refine zoom
-    for (let stepInner = 0; stepInner < 4; stepInner++) {
+    for (let stepInner = 0; stepInner < 100; stepInner++) {
       const searchRadiusInner = 1.0 / currentZoom;
       const boundaryInner = findBestBoundaryPoint(
         currentX, 
@@ -151,7 +151,9 @@ async function generateFractal(config, options = {}) {
         currentY = boundaryInner.y;
         const zoomMultInner = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
         currentZoom += zoomMultInner;
-        log(`Step ${stepInner + 1}: Complexity ${boundaryInner.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMultInner.toFixed(1)}× mult)`);
+        if ((stepInner + 1) % 10 == 0) {
+          log(`Step ${stepInner + 1}: Complexity ${boundaryInner.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMultInner.toFixed(1)}× mult)`);
+        }
       } else {
         log(`Step ${stepInner + 1}: Low complexity - stopping`);
         break;

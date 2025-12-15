@@ -5,7 +5,7 @@ const seedRegions = [
     cx: -0.7269,
     cy: 0.1889,
     name: "Spiral_Valley",
-    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.25, minActiveCells: 10 }
+    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.25, minActiveCells: 10, minColorDiversity: 0.1, minComplexityScore: 0 }
   },
   {
     cx: -0.7453,
@@ -41,7 +41,7 @@ const seedRegions = [
     cx: -0.1011,
     cy: 0.9563,
     name: "Seahorse_Tail",
-    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.01, minGeometryScore: 0.18, minActiveCells: 7, minColorDiversity: 0.1, minComplexityScore: 0 }
+    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.005, minGeometryScore: 0.18, minActiveCells: 7, minColorDiversity: 0.1, minComplexityScore: 0 }
   },
   {
     cx: -0.7500,
@@ -77,7 +77,7 @@ const seedRegions = [
     cx: -0.1011,
     cy: -0.9563,
     name: "Southern_Seahorse",
-    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.18, minActiveCells: 7, minColorDiversity: 0.1, minComplexityScore: 0 }
+    qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.005, minGeometryScore: 0.18, minActiveCells: 7, minColorDiversity: 0.1, minComplexityScore: 0 }
   },
   {
     cx: -0.1252,

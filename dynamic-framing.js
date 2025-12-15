@@ -39,16 +39,16 @@ function findBestCropForAspect(
   qualityConfig
 ) {
   const grid = 6; // higher = more precise, slower
-  const stepX = Math.floor((imgW - targetW) / (grid - 1));
-  const stepY = Math.floor((imgH - targetH) / (grid - 1));
+  const stepX = Math.max(1, Math.floor((imgW - targetW) / (grid - 1)));
+  const stepY = Math.max(1, Math.floor((imgH - targetH) / (grid - 1)));
 
   let bestScore = -Infinity;
   let bestCrop = null;
 
   for (let gy = 0; gy < grid; gy++) {
     for (let gx = 0; gx < grid; gx++) {
-      const x = Math.floor(gx * stepX);
-      const y = Math.floor(gy * stepY);
+      const x = Math.min(Math.floor(gx * stepX), imgW - targetW);
+      const y = Math.min(Math.floor(gy * stepY), imgH - targetH);
 
       const cropped = cropImageDataRect(
         imageData,
@@ -67,7 +67,8 @@ function findBestCropForAspect(
         qualityConfig
       );
 
-      if (!quality.passes) continue;
+      // DON'T check quality.passes - just rank by score
+      // The full image already passed, so we just want the BEST crop
 
       // Center bias (prefer spiral centers)
       const cx = (x + targetW / 2) / imgW - 0.5;
@@ -148,6 +149,8 @@ function generateDeviceCrops({
   const results = [];
 
   for (const target of targets) {
+    console.log(`Finding best crop for ${target.name} (${target.width}×${target.height})...`);
+    
     const crop = findBestCropForAspect(
       imageData,
       width,
@@ -157,7 +160,13 @@ function generateDeviceCrops({
       qualityConfig
     );
 
-    if (!crop) continue;
+    if (!crop) {
+      // This should NEVER happen since we removed the quality.passes check
+      console.error(`❌ ERROR: No crop found for ${target.name} - this is a bug!`);
+      continue;
+    }
+
+    console.log(`✓ Found crop for ${target.name} at (${crop.x}, ${crop.y}) with score ${crop.score.toFixed(3)}`);
 
     const canvas = renderCroppedCanvas(
       imageData,
@@ -171,6 +180,10 @@ function generateDeviceCrops({
       canvas,
       crop
     });
+  }
+
+  if (results.length === 0) {
+    throw new Error('Failed to generate any crops - this should never happen!');
   }
 
   return results;
