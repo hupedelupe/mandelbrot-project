@@ -6,6 +6,7 @@ const { getRandomPalette, getPaletteByName } = require('./palettes');
 const { getRandomRegion, getRegionByName, seedRegions } = require('./regions');
 const { analyzeImageQuality, sampleFractalForQuality } = require('./quality');
 const { renderFractal } = require('./renderer');
+const { zoomIntoFractal } = require('./fractalZoomFocus');
 
 // Track recently used regions for variety
 const recentRegions = [];
@@ -105,60 +106,22 @@ async function generateFractal(config, options = {}) {
     const searchSamples = genConfig.searchSamples || 35;
     const qualityConfig = selectedRegion.qualityControl;
     
-    let currentZoom = zoomMin + Math.random() * (zoomMax - zoomMin);
-    let currentX = selectedRegion.cx;
-    let currentY = selectedRegion.cy;
+    let initialZoom = zoomMin + Math.random() * (zoomMax - zoomMin);
+    let initialX = selectedRegion.cx;
+    let initialY = selectedRegion.cy;
     
     const zoomSteps = zoomStepsMin + Math.floor(Math.random() * (zoomStepsMax - zoomStepsMin + 1));
     
-    for (let step = 0; step < zoomSteps; step++) {
-      const searchRadius = 2.0 / currentZoom;
-      const boundary = findBestBoundaryPoint(
-        currentX, 
-        currentY, 
-        searchRadius, 
-        searchSamples, 
-        256,
-        qualityConfig.minComplexityScore
-      );
-      
-      if (boundary.foundGood) {
-        currentX = boundary.x;
-        currentY = boundary.y;
-        const zoomMult = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
-        currentZoom *= zoomMult;
-        log(`Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMult.toFixed(1)}× mult)`);
-      } else {
-        log(`Step ${step + 1}: Low complexity - stopping`);
-        break;
-      }
-    }
-
-    // refine zoom
-    for (let stepInner = 0; stepInner < 100; stepInner++) {
-      const searchRadiusInner = 1.0 / currentZoom;
-      const boundaryInner = findBestBoundaryPoint(
-        currentX, 
-        currentY, 
-        searchRadiusInner, 
-        searchSamples, 
-        512,
-        qualityConfig.minComplexityScore
-      );
-      
-      if (boundaryInner.foundGood && boundaryInner.complexity > qualityConfig.minComplexityScore) {
-        currentX = boundaryInner.x;
-        currentY = boundaryInner.y;
-        const zoomMultInner = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
-        currentZoom += zoomMultInner;
-        if ((stepInner + 1) % 10 == 0) {
-          log(`Step ${stepInner + 1}: Complexity ${boundaryInner.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMultInner.toFixed(1)}× mult)`);
-        }
-      } else {
-        log(`Step ${stepInner + 1}: Low complexity - stopping`);
-        break;
-      }
-    }
+    const { x: finalX, y: finalY, zoom: finalZoom } = zoomIntoFractal(
+      initialX,
+      initialY,
+      initialZoom,
+      zoomSteps,
+      searchSamples,
+      zoomMultMin,
+      zoomMultMax,
+      qualityConfig
+  );
     
     log(`Rendering ${config.server.width}×${config.server.height}...`);
     
@@ -167,9 +130,9 @@ async function generateFractal(config, options = {}) {
 
     // QUICK SAMPLING PASS
     const sample = sampleFractalForQuality(
-      currentX,
-      currentY,
-      Math.min(currentZoom, config.generation.zoomMax),
+      finalX,
+      finalY,
+      Math.min(finalZoom, config.generation.zoomMax),
       10000,
       qualityConfig,
     );
@@ -180,8 +143,8 @@ async function generateFractal(config, options = {}) {
       return Math.pow(x, 6) * Math.exp(x - 1);
     }
     
-    const samplePixels = 48 * 27;
-    const fullPixels = config.server.width * config.server.height;
+    // const samplePixels = 48 * 27;
+    // const fullPixels = config.server.width * config.server.height;
   
     
     // Visibility factor (1 = full iterations, low visibility = aggressive clamp)
@@ -193,7 +156,7 @@ async function generateFractal(config, options = {}) {
     const baseMaxIter = Math.floor(
       config.server.maxIter *
       iterMultiplier *
-      (1 + Math.log10(currentZoom) / 2)
+      (1 + Math.log10(finalZoom) / 2)
     );
 
     const maxIter = Math.max(
@@ -223,9 +186,9 @@ async function generateFractal(config, options = {}) {
     const { canvas, imageData } = renderFractal(
       config.server.width,
       config.server.height,
-      currentX,
-      currentY,
-      Math.min(currentZoom, config.generation.zoomMax),
+      finalX,
+      finalY,
+      Math.min(finalZoom, config.generation.zoomMax),
       selectedPalette,
       maxIter,
       config.rendering
@@ -260,9 +223,9 @@ async function generateFractal(config, options = {}) {
       metadata: {
         palette: selectedPalette.name,
         region: selectedRegion.name,
-        zoom: currentZoom,
-        centerX: currentX,
-        centerY: currentY,
+        zoom: finalZoom,
+        centerX: finalX,
+        centerY: finalY,
         maxIter,
         quality
       }
