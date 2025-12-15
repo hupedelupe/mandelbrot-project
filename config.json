@@ -56,7 +56,7 @@
     
     "antiGrain": {
       "enabled": true,
-      "blendFactor": 0.4,
+      "blendFactor": 0.45,
       "comment": "Light smoothing to reduce banding but keep detail"
     }
   },

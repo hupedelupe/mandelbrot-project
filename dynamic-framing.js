@@ -89,8 +89,8 @@ function findBestCropForAspect(
         bestCrop = {
           x,
           y,
-          width: targetW,
-          height: targetH,
+          w: targetW,
+          h: targetH,
           score: weightedScore,
           quality
         };
@@ -106,88 +106,136 @@ function findBestCropForAspect(
 ================================ */
 
 function renderCroppedCanvas(
-  imageData,
-  imgW,
-  imgH,
-  crop
-) {
-  const canvas = createCanvas(crop.width, crop.height);
-  const ctx = canvas.getContext('2d');
-
-  const cropped = cropImageDataRect(
     imageData,
-    imgW,
-    imgH,
-    crop.x,
-    crop.y,
-    crop.width,
-    crop.height
-  );
-
-  const imgData = ctx.createImageData(crop.width, crop.height);
-  imgData.data.set(cropped.data);
-  ctx.putImageData(imgData, 0, 0);
-
-  return canvas;
-}
+    srcWidth,
+    srcHeight,
+    crop,
+    outWidth = crop.w,
+    outHeight = crop.h
+  ) {
+    const srcCanvas = createCanvas(srcWidth, srcHeight);
+    const srcCtx = srcCanvas.getContext('2d');
+  
+    // 🔑 Create REAL ImageData object
+    const imgData = srcCtx.createImageData(srcWidth, srcHeight);
+    imgData.data.set(imageData.data);
+  
+    srcCtx.putImageData(imgData, 0, 0);
+  
+    const outCanvas = createCanvas(outWidth, outHeight);
+    const outCtx = outCanvas.getContext('2d');
+  
+    outCtx.drawImage(
+      srcCanvas,
+      crop.x,
+      crop.y,
+      crop.w,
+      crop.h,
+      0,
+      0,
+      outWidth,
+      outHeight
+    );
+  
+    return outCanvas;
+  }  
+  
 
 /* ================================
    MAIN ENTRY POINT
 ================================ */
 
 function generateDeviceCrops({
-  imageData,
-  width,
-  height,
-  qualityConfig
-}) {
-  const targets = [
-    { name: 'desktop', width: 2560, height: 1440 }, // 16:9
-    { name: 'mobile',  width: 1440, height: 2560 }  // 9:16
-  ];
+    imageData,
+    width,
+    height,
+    qualityConfig
+  }) {
+    // Always crop from the FULL master image
+    const targets = [
+      {
+        name: 'desktop',
+        aspectWidth: 16,
+        aspectHeight: 9,
+        outWidth: 4096,
+        outHeight: 2304
+      },
+      {
+        name: 'mobile',
+        aspectWidth: 9,
+        aspectHeight: 16,
+        outWidth: 2304,
+        outHeight: 4096
+      }
+    ];
+  
+    const results = [];
+  
+    for (const target of targets) {
+      console.log(
+        `Finding best ${target.name} crop (${target.aspectWidth}:${target.aspectHeight}) from ${width}×${height}...`
+      );
 
-  const results = [];
+      // Compute largest possible crop with this aspect
+        // Compute largest possible crop with this aspect
+        let cropW, cropH;
+        const targetAspect = target.aspectWidth / target.aspectHeight;
+        const imageAspect = width / height;
 
-  for (const target of targets) {
-    console.log(`Finding best crop for ${target.name} (${target.width}×${target.height})...`);
-    
-    const crop = findBestCropForAspect(
-      imageData,
-      width,
-      height,
-      target.width,
-      target.height,
-      qualityConfig
-    );
+        if (imageAspect > targetAspect) {
+        // Image is wider → height constrained
+        cropH = height;
+        cropW = Math.floor(height * targetAspect);
+        } else {
+        // Image is taller → width constrained
+        cropW = width;
+        cropH = Math.floor(width / targetAspect);
+        }
 
-    if (!crop) {
-      // This should NEVER happen since we removed the quality.passes check
-      console.error(`❌ ERROR: No crop found for ${target.name} - this is a bug!`);
-      continue;
+        const crop = findBestCropForAspect(
+        imageData,
+        width,
+        height,
+        cropW,
+        cropH,
+        qualityConfig
+        );
+
+  
+      if (!crop) {
+        console.error(`❌ ERROR: No crop found for ${target.name} — this should not happen`);
+        continue;
+      }
+  
+      console.log(
+        `✓ Found ${target.name} crop at (${crop.x}, ${crop.y}) ` +
+        `size ${crop.w}×${crop.h}, score ${crop.score.toFixed(3)}`
+      );
+  
+      // 🔑 Render from FULL resolution, then scale
+      const canvas = renderCroppedCanvas(
+        imageData,
+        width,
+        height,
+        crop,
+        target.outWidth,
+        target.outHeight
+      );
+  
+      results.push({
+        name: target.name,
+        canvas,
+        crop,
+        output: {
+          width: target.outWidth,
+          height: target.outHeight
+        }
+      });
     }
-
-    console.log(`✓ Found crop for ${target.name} at (${crop.x}, ${crop.y}) with score ${crop.score.toFixed(3)}`);
-
-    const canvas = renderCroppedCanvas(
-      imageData,
-      width,
-      height,
-      crop
-    );
-
-    results.push({
-      name: target.name,
-      canvas,
-      crop
-    });
+  
+    return results;
   }
-
-  if (results.length === 0) {
-    throw new Error('Failed to generate any crops - this should never happen!');
-  }
-
-  return results;
-}
+  
 
 module.exports = {
   generateDeviceCrops
