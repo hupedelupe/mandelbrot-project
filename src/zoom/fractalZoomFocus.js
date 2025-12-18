@@ -1,6 +1,5 @@
 // fractalZoomFocus.js
-// Zooming with outer variance and inner deep-focus scoring
-const { mandelbrotIterations } = require('./mandelbrot');
+// Zooming with outer variance and inner deep-focus scoring (fractal-agnostic)
 
 function zoomIntoFractal(
     initialX,
@@ -10,54 +9,94 @@ function zoomIntoFractal(
     searchSamples = 40,
     zoomMultMin = 1.5,
     zoomMultMax = 3.5,
-    qualityConfig
+    qualityConfig,
+    iterateFn,  // Accept any fractal's iterate function
+    regionConfig = null  // NEW: Full region config with zoomStrategy
   ) {
     let currentX = initialX;
     let currentY = initialY;
     let currentZoom = initialZoom;
-  
-    function randomWeights3() {
-        // Pick two random numbers between 0 and 1
+
+    // Get zoom strategy from region config
+    const strategy = regionConfig?.zoomStrategy || null;
+
+    let complexityWeight, avgIterWeight, centerBiasWeight;
+    let actualZoomSteps, actualSearchSamples, actualZoomMultMin, actualZoomMultMax, actualMinComplexity;
+    let skipComplexitySteps;
+
+    if (strategy) {
+      // Use strategy-defined weights
+      complexityWeight = strategy.complexityWeight;
+      avgIterWeight = strategy.avgIterWeight;
+      centerBiasWeight = strategy.centerBiasWeight;
+
+      // Override zoom parameters if strategy specifies them
+      actualZoomSteps = strategy.zoomSteps ?
+        strategy.zoomSteps.min + Math.floor(Math.random() * (strategy.zoomSteps.max - strategy.zoomSteps.min + 1)) :
+        zoomSteps;
+      actualSearchSamples = strategy.searchSamples || searchSamples;
+      actualZoomMultMin = strategy.zoomMult?.min || zoomMultMin;
+      actualZoomMultMax = strategy.zoomMult?.max || zoomMultMax;
+      actualMinComplexity = strategy.minComplexity !== undefined ? strategy.minComplexity : 15;
+      skipComplexitySteps = strategy.skipComplexityCheckSteps || 0;
+
+      log(`Using zoom strategy for ${regionConfig.name || 'region'}`);
+    } else {
+      // Fallback to random weights (legacy behavior)
+      function randomWeights3() {
         const r1 = Math.random();
         const r2 = Math.random();
-      
-        // Sort them so we can slice the [0,1] interval
         const [s1, s2] = [r1, r2].sort((a, b) => a - b);
-      
-        // Slice the interval to get three weights that sum to 1
-        const w1 = s1;
-        const w2 = s2 - s1;
-        const w3 = 1 - s2;
-      
-        return [w1, w2, w3];
+        return [s1, s2 - s1, 1 - s2];
       }
+      [complexityWeight, avgIterWeight, centerBiasWeight] = randomWeights3();
+      actualZoomSteps = zoomSteps;
+      actualSearchSamples = searchSamples;
+      actualZoomMultMin = zoomMultMin;
+      actualZoomMultMax = zoomMultMax;
+      actualMinComplexity = 15;  // Default minimum complexity
+      skipComplexitySteps = 0;   // No skipping by default
+    }
 
-      const [complexityWeight, avgIterWeight, centerBiasWeight] = randomWeights3();
-  
     log(`Zoom weights → complexity: ${complexityWeight.toFixed(2)}, avgIter: ${avgIterWeight.toFixed(2)}, centerBias: ${centerBiasWeight.toFixed(2)}`);
+    if (skipComplexitySteps > 0) {
+      log(`Skipping complexity checks for first ${skipComplexitySteps} steps`);
+    }
   
     // -----------------------------
     // Outer rough zoom pass
     // -----------------------------
-    for (let step = 0; step < zoomSteps; step++) {
+    for (let step = 0; step < actualZoomSteps; step++) {
+      const skipComplexityThisStep = step < skipComplexitySteps;
+
+      if (skipComplexityThisStep) {
+        // Skip complexity check - just zoom blindly to escape boring regions
+        const zoomMult = actualZoomMultMin + Math.random() * (actualZoomMultMax - actualZoomMultMin);
+        currentZoom *= zoomMult;
+        log(`Step ${step + 1}: Skipping complexity check, blind zoom to ${currentZoom.toFixed(0)}× (zoomMult: ${zoomMult.toFixed(2)}×)`);
+        continue;
+      }
+
+      // Normal complexity-based zoom
       const searchRadius = 2.0 / currentZoom;
-  
+
       const boundary = findBestBoundaryPoint(
         currentX,
         currentY,
         searchRadius,
-        searchSamples,
+        actualSearchSamples,
         256,
-        qualityConfig.minComplexityScore,
+        actualMinComplexity,
         complexityWeight,
         avgIterWeight,
-        centerBiasWeight
+        centerBiasWeight,
+        iterateFn
       );
-  
+
       if (boundary.foundGood) {
         currentX = boundary.x;
         currentY = boundary.y;
-        const zoomMult = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
+        const zoomMult = actualZoomMultMin + Math.random() * (actualZoomMultMax - actualZoomMultMin);
         currentZoom *= zoomMult;
         log(`Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (zoomMult: ${zoomMult.toFixed(2)}×)`);
       } else {
@@ -69,25 +108,26 @@ function zoomIntoFractal(
     // -----------------------------
     // Inner deep-focus refine zoom
     // -----------------------------
-    for (let stepInner = 0; stepInner < Math.min(5, (zoomSteps * 2)); stepInner++) {
+    for (let stepInner = 0; stepInner < Math.min(5, (actualZoomSteps * 2)); stepInner++) {
       const searchRadiusInner = Math.max(0.25 / currentZoom, 1e-6);
-  
+
       const boundaryInner = findBestBoundaryPoint(
         currentX,
         currentY,
         searchRadiusInner,
-        searchSamples * 2,
+        actualSearchSamples * 2,
         512,
-        qualityConfig.minComplexityScore,
+        actualMinComplexity,
         complexityWeight,
         avgIterWeight,
-        centerBiasWeight
+        centerBiasWeight,
+        iterateFn
       );
-  
-      if (boundaryInner.foundGood && boundaryInner.complexity > qualityConfig.minComplexityScore) {
+
+      if (boundaryInner.foundGood && boundaryInner.complexity > actualMinComplexity) {
         currentX = boundaryInner.x;
         currentY = boundaryInner.y;
-        const zoomMultInner = zoomMultMin + Math.random() * (zoomMultMax - zoomMultMin);
+        const zoomMultInner = actualZoomMultMin + Math.random() * (actualZoomMultMax - actualZoomMultMin);
         currentZoom += zoomMultInner;
   
         if ((stepInner + 1) % 10 === 0) {
@@ -99,7 +139,13 @@ function zoomIntoFractal(
       }
     }
   
-    return { x: currentX, y: currentY, zoom: currentZoom };
+    // Determine if we successfully found interesting regions
+    // If we stopped very early (fewer than half the minimum steps), we likely failed
+    const minSteps = actualZoomSteps / 2;
+    const actualStepsTaken = Math.log(currentZoom / initialZoom) / Math.log(2); // Rough estimate
+    const foundGood = actualStepsTaken >= minSteps;
+
+    return { x: currentX, y: currentY, zoom: currentZoom, foundGood };
   }
   
   // -----------------------------
@@ -114,7 +160,8 @@ function zoomIntoFractal(
     minComplexity = 15,
     complexityWeight = 0.7,
     avgIterWeight = 0.3,
-    centerBiasWeight = 0.2
+    centerBiasWeight = 0.2,
+    iterateFn
   ) {
     let bestX = cx,
         bestY = cy,
@@ -126,16 +173,16 @@ function zoomIntoFractal(
         const x = cx + (sx / samples - 0.5) * searchRadius * 2;
         const y = cy + (sy / samples - 0.5) * searchRadius * 2;
   
-        const center = mandelbrotIterations(x, y, maxIter);
+        const center = iterateFn(x, y, maxIter);
         if (center.inSet || center.iter < 8) continue;
-  
+
         const delta = searchRadius / samples;
-  
+
         const neighbors = [
-          mandelbrotIterations(x + delta, y, maxIter),
-          mandelbrotIterations(x - delta, y, maxIter),
-          mandelbrotIterations(x, y + delta, maxIter),
-          mandelbrotIterations(x, y - delta, maxIter)
+          iterateFn(x + delta, y, maxIter),
+          iterateFn(x - delta, y, maxIter),
+          iterateFn(x, y + delta, maxIter),
+          iterateFn(x, y - delta, maxIter)
         ];
   
         const complexity = neighbors.reduce((acc, n) => acc + Math.abs(center.iter - n.iter), 0);

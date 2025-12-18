@@ -1,20 +1,25 @@
 {
   "name": "mandelbrot-generator",
   "version": "2.0.0",
-  "description": "Modular Mandelbrot fractal generator with CLI",
-  "main": "mandelbrot-generator.js",
+  "description": "Multi-fractal generator with CLI and device crop support",
+  "main": "src/index.js",
   "bin": {
-    "mandelbrot": "./mandelbrot-generator.js"
+    "mandelbrot": "./src/index.js"
   },
   "scripts": {
-    "generate": "node mandelbrot-generator.js",
-    "test": "node mandelbrot-generator.js --test --count 5",
-    "list": "node mandelbrot-generator.js --list-palettes && node mandelbrot-generator.js --list-regions"
+    "generate": "node src/index.js",
+    "test": "node src/index.js --test --count 5",
+    "test-production": "node src/index.js --test-production --count 3"
   },
-  "keywords": ["mandelbrot", "fractal", "generator", "art"],
+  "keywords": [
+    "mandelbrot",
+    "fractal",
+    "generator",
+    "art"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "canvas": "^2.11.2"
+    "canvas": "^3.2.0"
   }
 }

@@ -1,6 +1,16 @@
 # Mandelbrot Fractal Wallpaper Generator
 
-Automated system that generates beautiful Mandelbrot fractals hourly and distributes them to your devices.
+Advanced fractal generator that creates stunning, high-quality wallpapers with intelligent quality control and adaptive rendering. Supports multiple fractal types, automatic device-specific cropping, and smart iteration management to prevent system overload.
+
+## Features
+
+- **Multi-Fractal Support**: Mandelbrot (z²), Mandelbrot³, Mandelbrot⁴, Burning Ship, Tricorn
+- **Adaptive Iteration Control**: Automatically scales down iterations to prevent crashes on dense fractals
+- **CDF Color Normalization**: Histogram equalization for optimal color distribution
+- **Smart Quality Checks**: Geometry detection, spatial distribution, edge density analysis
+- **Device-Specific Outputs**: Automatically generates desktop (16:9) and mobile (9:16) crops
+- **Intelligent Zoom Focus**: Finds and zooms into interesting fractal regions
+- **Automated Distribution**: Hourly generation with HTTP serving to multiple devices
 
 ## Architecture
 
@@ -14,45 +24,56 @@ Automated system that generates beautiful Mandelbrot fractals hourly and distrib
 
 1. Clone repo:
 ```bash
-   cd ~
-   git clone https://github.com/YOUR_USERNAME/mandelbrot-project.git
-   cd mandelbrot-project
+cd ~
+git clone https://github.com/YOUR_USERNAME/mandelbrot-project.git
+cd mandelbrot-project
 ```
 
 2. Install dependencies:
 ```bash
-   npm install
-   chmod +x deploy.sh
+npm install
 ```
 
-3. Test:
+3. Run deploy script (handles cron setup automatically):
 ```bash
-   ./deploy.sh
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
 ```
 
-4. Setup hourly cron:
+The deploy script will:
+- Detect your install location automatically
+- Pull latest code from current branch
+- Install/update dependencies
+- Set up hourly cron job (runs at :50 past each hour)
+
+4. **(Optional but recommended)** Test immediately on first install:
 ```bash
-   crontab -e
-   # Add:
-   0 * * * * cd /home/ubuntu/mandelbrot-project && ./deploy.sh >> /home/ubuntu/deploy.log 2>&1
+node src/index.js
 ```
+
+This generates your first fractal and verifies everything works. Otherwise, wait until :50 past the hour for automatic generation.
 
 ### Mac Setup
 
 1. Clone repo locally:
 ```bash
-   cd ~
-   git clone https://github.com/YOUR_USERNAME/mandelbrot-project.git
-   cd mandelbrot-project
+cd ~
+git clone https://github.com/YOUR_USERNAME/mandelbrot-project.git
+cd mandelbrot-project
 ```
 
-2. Run one-time setup:
+2. Run setup script (handles cron setup automatically):
 ```bash
-   cd local-setup
-   ./setup-mac.sh
+chmod +x scripts/setup-mac.sh
+./scripts/setup-mac.sh
 ```
 
-3. Done! Your wallpaper will update hourly and on wake.
+The setup script will:
+- Make update-wallpaper.sh executable
+- Download and set wallpaper immediately
+- Set up hourly cron job (runs on the hour)
+
+Done! Your wallpaper will update automatically every hour.
 
 ### iPhone Setup
 
@@ -65,21 +86,95 @@ Automated system that generates beautiful Mandelbrot fractals hourly and distrib
    - Run shortcut
    - Disable "Ask Before Running"
 
+## Testing & Development
+
+### Local Testing
+
+```bash
+# Test with a single fractal (saves full scan image)
+node src/index.js --test
+
+# Test production workflow locally (generates device crops)
+node src/index.js --test-production
+
+# Generate multiple fractals for testing
+node src/index.js --test --count=10
+
+# Force specific fractal type
+node src/index.js --test --fractal=Mandelbrot4
+
+# Force specific region and palette
+node src/index.js --test --region=Seahorse_Valley --palette=Cyber_Spectrum
+```
+
+### Available Fractals
+
+- `Mandelbrot` - Classic Mandelbrot set (z²)
+- `Mandelbrot3` - Cubic Mandelbrot (z³)
+- `Mandelbrot4` - Quartic Mandelbrot (z⁴) - densest, most likely to trigger adaptive constraints
+- `BurningShip` - Burning Ship fractal
+- `Tricorn` - Tricorn (Mandelbar) fractal
+
 ## Configuration
 
-Edit `config.json` to adjust:
-- Image resolution
-- Quality thresholds
-- Max iterations
+Edit `config/config.json` to customize:
 
-## Quality Control
+### Core Settings
+- **`server.maxIter`**: Base iteration count (default: 2048)
+- **`rendering.maxIterMultiplier`**: Iteration multiplier for detail (default: 10)
+- **`rendering.maxTotalIterations`**: Safety threshold to prevent crashes (default: 100 billion)
+- **`rendering.scanResolution`**: Preview resolution for crop finding (default: 1200)
 
-The generator ensures images meet minimum standards:
-- **Color Diversity**: At least 15% of color spectrum used
-- **Visible Pixels**: At least 20% non-black pixels
-- **Complexity Score**: Minimum boundary variation of 8
+### Fractal Selection
+- **`fractalVariety.enabled`**: Enable multi-fractal mode
+- **`fractalVariety.weights`**: Probability weights for each fractal type
 
-Failed images are regenerated automatically (up to 5 attempts).
+### Quality Control
+- **`qualityControl.minColorDiversity`**: Minimum color variety (0-1)
+- **`qualityControl.minVisiblePixels`**: Minimum non-black pixels (0-1)
+- **`qualityControl.minGeometryScore`**: Minimum edge/structure detail (0-1)
+- **`qualityControl.minActiveCells`**: Minimum active grid cells (out of 25)
+
+### Zoom & Generation
+- **`generation.zoomRange`**: Initial zoom range (min/max)
+- **`generation.zoomSteps`**: Number of zoom iterations (min/max)
+- **`generation.zoomMultiplier`**: Zoom factor per step (min/max)
+
+## How It Works
+
+### Adaptive Iteration Control
+
+The system automatically manages iteration counts to prevent crashes:
+
+1. **Base Calculation**: `maxIter = baseIter × multiplier × log(zoom)`
+2. **Visibility Scaling**: Reduces iterations for dense (mostly black) regions
+3. **Constraint Check**: If total iterations > threshold, scales down proportionally
+4. **Logging**: Shows projected vs actual iterations before rendering
+
+Example output:
+```
+⚠️  ADAPTIVE CONSTRAINT TRIGGERED:
+  Projected: 119,814,142,464 iterations
+  Threshold: 100,000,000,000 iterations
+  Scaling: 5898 → 4922 (83.5%)
+  Fractal: Mandelbrot4
+```
+
+### Rendering Pipeline
+
+1. **Zoom Focus**: Intelligently explores fractal space to find interesting regions
+2. **Quick Sample**: Low-res check for visibility and quality
+3. **Scan Render**: 1200×1200 preview with full quality checks
+4. **Crop Detection**: Finds best desktop (16:9) and mobile (9:16) regions
+5. **Final Render**: High-res renders (4096×2304, 2304×4096) with per-crop CDF normalization
+
+### CDF Color Normalization
+
+Each render uses histogram equalization (CDF) to optimize color distribution:
+- Builds histogram of all iteration values
+- Creates cumulative distribution function
+- Maps iteration counts to normalized 0-1 range
+- Results in better detail visibility and no color banding
 
 ## Maintenance
 

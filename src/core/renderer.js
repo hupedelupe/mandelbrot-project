@@ -1,8 +1,7 @@
 // renderer-enhanced.js - Enhanced fractal rendering with anti-grain and smoothing
 
 const { createCanvas } = require('canvas');
-const { mandelbrotIterations } = require('./mandelbrot');
-const { getColorFromPalette } = require('./palettes');
+const { getColorFromPalette } = require('../data/palettes');
 
 function getColorWithSmoothing(normalized, palette, smoothIter, renderConfig) {
   const baseColor = getColorFromPalette(normalized, palette);
@@ -49,43 +48,69 @@ function applyAntiGrain(imageData, width, height, blendFactor) {
   }
 }
 
-function renderFractal(width, height, centerX, centerY, zoom, palette, maxIter, renderConfig) {
+// ============================================================================
+// RENDER FRACTAL WITH CDF NORMALIZATION
+// ============================================================================
+// Two-pass rendering for optimal color distribution:
+// Pass 1: Calculate all iteration values and build histogram
+// Pass 2: Render with CDF-normalized colors for better visual distribution
+//
+// CDF (Cumulative Distribution Function) normalization ensures colors are
+// evenly distributed across the visible range, preventing banding and
+// improving detail visibility in both dense and sparse regions.
+function renderFractal(width, height, centerX, centerY, zoom, palette, maxIter, renderConfig, iterateFn) {
 
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // -------------------------------
-  //  CDF ADDITION - STORAGE
-  // -------------------------------
+  // Store smooth iteration values for histogram analysis
   const smoothValues = new Float64Array(width * height);
   let index = 0;
 
-  const size = 3.5 / zoom;
-  const xMin = centerX - size;
-  const yMin = centerY - size;
-  const xMax = centerX + size;
-  const yMax = centerY + size;
+  // Handle aspect ratio to avoid stretching
+  const aspectRatio = width / height;
+  const baseSize = 3.5 / zoom;
 
-  // -------------------------------
-  //  FIRST PASS — collect smooth values
-  // -------------------------------
+  let xSize, ySize;
+  if (aspectRatio > 1) {
+    // Landscape: expand X range
+    ySize = baseSize;
+    xSize = baseSize * aspectRatio;
+  } else {
+    // Portrait or square: expand Y range
+    xSize = baseSize;
+    ySize = baseSize / aspectRatio;
+  }
+
+  const xMin = centerX - xSize;
+  const yMin = centerY - ySize;
+  const xMax = centerX + xSize;
+  const yMax = centerY + ySize;
+
+  // ============================================================================
+  // PASS 1: Collect smooth iteration values for all pixels
+  // ============================================================================
   for (let py = 0; py < height; py++) {
     const y0 = yMin + (yMax - yMin) * py / height;
 
     for (let px = 0; px < width; px++) {
       const x0 = xMin + (xMax - xMin) * px / width;
-      const result = mandelbrotIterations(x0, y0, maxIter);
+      const result = iterateFn(x0, y0, maxIter);
 
+      // Store smooth iteration value (-1 for pixels in the set)
       smoothValues[index++] = result.inSet ? -1 : result.smooth;
     }
   }
 
-  // -------------------------------
-  //  CDF ADDITION — build histogram
-  // -------------------------------
+  // ============================================================================
+  // BUILD CDF: Analyze iteration distribution for color normalization
+  // ============================================================================
+  // Creates a cumulative distribution function to map iteration values to
+  // normalized 0-1 range. This ensures colors are evenly distributed across
+  // the visible detail, regardless of the iteration distribution.
   function buildCDF(values, maxIter) {
-    const HIST_SIZE = maxIter * 100; 
-    // 100× oversampling keeps gradients smooth.
+    // High-resolution histogram for smooth color gradients
+    const HIST_SIZE = maxIter * 100;
 
     const histogram = new Float64Array(HIST_SIZE);
     const count = values.length;
@@ -115,19 +140,19 @@ function renderFractal(width, height, centerX, centerY, zoom, palette, maxIter, 
     return cdf;
   }
 
-  // Build CDF now
+  // Build the CDF from collected iteration values
   const cdf = buildCDF(smoothValues, maxIter);
 
-  // Helper: map smooth iteration to normalized 0–1 using CDF
+  // Map smooth iteration values to normalized color range using CDF
   function normalizeViaCDF(smooth, maxIter, cdf) {
     const HIST_SIZE = cdf.length;
     const bin = Math.min(HIST_SIZE - 1, Math.floor((smooth / maxIter) * (HIST_SIZE - 1)));
     return cdf[bin];
   }
 
-  // -------------------------------
-  //  SECOND PASS — render with CDF-normalized values
-  // -------------------------------
+  // ============================================================================
+  // PASS 2: Render with CDF-normalized colors
+  // ============================================================================
   const imageData = ctx.createImageData(width, height);
   index = 0;
   let svIndex = 0;

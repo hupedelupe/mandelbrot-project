@@ -1,7 +1,5 @@
 // quality.js - Enhanced image quality analysis with geometry detection
 
-const { mandelbrotIterations } = require('./mandelbrot');
-
 /**
  * Detect edges/boundaries in the image
  * High edge density = lots of geometric detail
@@ -169,7 +167,7 @@ function analyzeImageQuality(imageData, width, height, qualityConfig) {
  * Fast pre-check before rendering
  * Only checks visibility to avoid rendering mostly-black images
  */
-function sampleFractalForQuality(centerX, centerY, zoom, maxIter, qualityConfig) {
+function sampleFractalForQuality(centerX, centerY, zoom, maxIter, qualityConfig, iterateFn) {
   const sampleW = 48;
   const sampleH = 27;
 
@@ -189,7 +187,7 @@ function sampleFractalForQuality(centerX, centerY, zoom, maxIter, qualityConfig)
     for (let sx = 0; sx < sampleW; sx++) {
       const x0 = xMin + (xMax - xMin) * (sx / sampleW);
 
-      const result = mandelbrotIterations(x0, y0, maxIter);
+      const result = iterateFn(x0, y0, maxIter);
 
       totalIterations += result.iter; // use 'iter' returned by mandelbrotIterations
       if (result.inSet) {

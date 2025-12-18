@@ -38,7 +38,13 @@
   "rendering": {
     "maxIterMultiplier": 10,
     "comment": "Higher = more detail and color variation",
-    
+
+    "maxTotalIterations": 100000000000,
+    "maxTotalIterationsComment": "Safety threshold: scale down maxIter if total iterations across all renders would exceed this (100 billion default)",
+
+    "scanResolution": 1200,
+    "scanResolutionComment": "Low-res render size for finding crop regions. Much faster than full 4096×4096",
+
     "colorSmoothing": {
       "enabled": true,
       "brightness": {
@@ -81,12 +87,12 @@
   "fractalVariety": {
     "enabled": true,
     "weights": {
-      "mandelbrot": 0.75,
-      "burningShip": 0.10,
-      "multibrot3": 0.08,
-      "multibrot4": 0.05,
-      "tricorn": 0.02
+      "Mandelbrot": 1,
+      "BurningShip": 0,
+      "Mandelbrot3": 1,
+      "Mandelbrot4": 1,
+      "Tricorn": 0
     },
-    "comment": "75% classic, 10% burning ship, 8% cubic, 5% quartic, 2% tricorn"
+    "comment": "75% classic Mandelbrot, 15% Burning Ship, 8% Mandelbrot3, 2% Tricorn"
   }
 }
