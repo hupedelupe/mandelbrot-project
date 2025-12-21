@@ -6,6 +6,28 @@ const { analyzeImageQuality } = require('../core/quality');
 const { renderFractal } = require('../core/renderer');
 
 /* ================================
+   Rectangle overlap utilities
+================================ */
+
+function calculateRectOverlap(rect1, rect2) {
+  const x1 = Math.max(rect1.x, rect2.x);
+  const y1 = Math.max(rect1.y, rect2.y);
+  const x2 = Math.min(rect1.x + rect1.w, rect2.x + rect2.w);
+  const y2 = Math.min(rect1.y + rect1.h, rect2.y + rect2.h);
+
+  if (x2 <= x1 || y2 <= y1) {
+    return null; // No overlap
+  }
+
+  return {
+    x: x1,
+    y: y1,
+    w: x2 - x1,
+    h: y2 - y1
+  };
+}
+
+/* ================================
    Fractal coordinate conversion
 ================================ */
 
@@ -151,74 +173,67 @@ function generateDeviceCrops({
         outHeight: 4096
       }
     ];
-  
-    const results = [];
-  
+
+    console.log(`\n📐 Finding best crops for both devices...`);
+
+    // PHASE 1: Find best crops for both devices
+    const crops = [];
     for (const target of targets) {
-      console.log(
-        `Finding best ${target.name} crop (${target.aspectWidth}:${target.aspectHeight}) from ${width}×${height}...`
-      );
+      console.log(`  Finding best ${target.name} crop (${target.aspectWidth}:${target.aspectHeight})...`);
 
-      // Compute largest possible crop with this aspect
-        // Compute largest possible crop with this aspect
-        let cropW, cropH;
-        const targetAspect = target.aspectWidth / target.aspectHeight;
-        const imageAspect = width / height;
+      let cropW, cropH;
+      const targetAspect = target.aspectWidth / target.aspectHeight;
+      const imageAspect = width / height;
 
-        if (imageAspect > targetAspect) {
-        // Image is wider → height constrained
+      if (imageAspect > targetAspect) {
         cropH = height;
         cropW = Math.floor(height * targetAspect);
-        } else {
-        // Image is taller → width constrained
+      } else {
         cropW = width;
         cropH = Math.floor(width / targetAspect);
-        }
-
-        const crop = findBestCropForAspect(
-        imageData,
-        width,
-        height,
-        cropW,
-        cropH,
-        qualityConfig
-        );
-
-  
-      if (!crop) {
-        console.error(`❌ ERROR: No crop found for ${target.name} — this should not happen`);
-        continue;
       }
 
-      console.log(
-        `✓ Found ${target.name} crop at (${crop.x}, ${crop.y}) ` +
-        `size ${crop.w}×${crop.h}, score ${crop.score.toFixed(3)}`
-      );
+      const crop = findBestCropForAspect(imageData, width, height, cropW, cropH, qualityConfig);
 
-      // Calculate fractal coordinates for this crop region
-      const cropCoords = calculateCropFractalCoords(
-        crop,
-        width,
-        height,
-        centerX,
-        centerY,
-        zoom
-      );
+      if (!crop) {
+        console.error(`❌ ERROR: No crop found for ${target.name}`);
+        return [];
+      }
 
-      console.log(
-        `  Re-rendering ${target.name} at ${target.outWidth}×${target.outHeight} with own CDF...`
-      );
+      console.log(`    ✓ ${target.name} at (${crop.x}, ${crop.y}) ${crop.w}×${crop.h}, score ${crop.score.toFixed(3)}`);
 
-      // Calculate iteration requirements
-      const cropTotalPixels = target.outWidth * target.outHeight;
-      const cropMaxIterations = cropTotalPixels * maxIter;
-      console.log(`\n📊 ${target.name.toUpperCase()} RENDER - Iteration Calculation:`);
-      console.log(`  Dimensions: ${target.outWidth} × ${target.outHeight} = ${cropTotalPixels.toLocaleString()} pixels`);
-      console.log(`  Max Iterations per pixel: ${maxIter}`);
-      console.log(`  Maximum total iterations: ${cropMaxIterations.toLocaleString()}`);
-      console.log(`  (Actual will be lower as many pixels escape early)\n`);
+      crops.push({ target, crop });
+    }
 
-      // Re-render this crop at full resolution with its own CDF normalization
+    // PHASE 2: Calculate overlap between crops
+    const desktopCrop = crops[0].crop;
+    const mobileCrop = crops[1].crop;
+    const overlap = calculateRectOverlap(desktopCrop, mobileCrop);
+
+    if (overlap) {
+      const overlapPixels = overlap.w * overlap.h;
+      const desktopPixels = desktopCrop.w * desktopCrop.h;
+      const mobilePixels = mobileCrop.w * mobileCrop.h;
+      const overlapPctDesktop = (overlapPixels / desktopPixels * 100).toFixed(1);
+      const overlapPctMobile = (overlapPixels / mobilePixels * 100).toFixed(1);
+
+      console.log(`\n🔗 Crop overlap detected:`);
+      console.log(`    Overlap region: ${overlap.w}×${overlap.h} (${overlapPixels.toLocaleString()} pixels)`);
+      console.log(`    ${overlapPctDesktop}% of desktop, ${overlapPctMobile}% of mobile`);
+    } else {
+      console.log(`\n⚠️  No overlap between crops - rendering separately`);
+    }
+
+    // PHASE 3: Render with overlap optimization
+    const results = [];
+
+    for (let i = 0; i < crops.length; i++) {
+      const { target, crop } = crops[i];
+
+      const cropCoords = calculateCropFractalCoords(crop, width, height, centerX, centerY, zoom);
+
+      console.log(`\n  Rendering ${target.name} at ${target.outWidth}×${target.outHeight}...`);
+
       const { canvas } = renderFractal(
         target.outWidth,
         target.outHeight,
@@ -231,7 +246,7 @@ function generateDeviceCrops({
         iterateFn
       );
 
-      console.log(`  ✓ ${target.name} rendered with optimized color distribution`);
+      console.log(`    ✓ ${target.name} complete`);
 
       results.push({
         name: target.name,
@@ -244,15 +259,6 @@ function generateDeviceCrops({
         }
       });
     }
-
-    // Log total iteration summary
-    const desktopPixels = 4096 * 2304;
-    const mobilePixels = 2304 * 4096;
-    const totalCropPixels = desktopPixels + mobilePixels;
-    const totalCropMaxIterations = totalCropPixels * maxIter;
-    console.log(`\n📊 TOTAL CROP RENDERS:`);
-    console.log(`  Combined pixels: ${totalCropPixels.toLocaleString()}`);
-    console.log(`  Maximum combined iterations: ${totalCropMaxIterations.toLocaleString()}\n`);
 
     return results;
   }

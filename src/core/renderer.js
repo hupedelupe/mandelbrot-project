@@ -88,19 +88,98 @@ function renderFractal(width, height, centerX, centerY, zoom, palette, maxIter, 
   const yMax = centerY + ySize;
 
   // ============================================================================
-  // PASS 1: Collect smooth iteration values for all pixels
+  // PASS 1: Render checkerboard pattern (50% of pixels)
   // ============================================================================
+  console.log(`  Phase 1: Checkerboard sampling (50% of pixels)...`);
+  const startPhase1 = Date.now();
+
+  // Initialize all pixels as unrendered first
+  smoothValues.fill(-999);
+
+  // Only loop through checkerboard pixels (much faster!)
   for (let py = 0; py < height; py++) {
     const y0 = yMin + (yMax - yMin) * py / height;
+    const startPx = py % 2; // Start at 0 or 1 to create checkerboard
 
-    for (let px = 0; px < width; px++) {
+    for (let px = startPx; px < width; px += 2) {
+      const idx = py * width + px;
       const x0 = xMin + (xMax - xMin) * px / width;
       const result = iterateFn(x0, y0, maxIter);
-
-      // Store smooth iteration value (-1 for pixels in the set)
-      smoothValues[index++] = result.inSet ? -1 : result.smooth;
+      smoothValues[idx] = result.inSet ? -1 : result.smooth;
     }
   }
+
+  console.log(`    ✓ ${((Date.now() - startPhase1) / 1000).toFixed(1)}s`);
+
+  // ============================================================================
+  // PASS 2: Fill pixels surrounded by 4 maxIter neighbors
+  // ============================================================================
+  console.log(`  Phase 2: Filling guaranteed maxIter regions...`);
+  const startPhase2 = Date.now();
+
+  let filledCount = 0;
+  const unrenderedPixels = [];
+
+  for (let py = 1; py < height - 1; py++) {
+    for (let px = 1; px < width - 1; px++) {
+      const idx = py * width + px;
+
+      // Skip if already rendered
+      if (smoothValues[idx] !== -999) continue;
+
+      // Check 4 neighbors
+      const left = smoothValues[py * width + (px - 1)];
+      const right = smoothValues[py * width + (px + 1)];
+      const up = smoothValues[(py - 1) * width + px];
+      const down = smoothValues[(py + 1) * width + px];
+
+      // If all 4 neighbors are maxIter (-1), this pixel MUST be maxIter
+      if (left === -1 && right === -1 && up === -1 && down === -1) {
+        smoothValues[idx] = -1;
+        filledCount++;
+      } else {
+        // Mark for rendering in phase 3
+        unrenderedPixels.push({ px, py, idx });
+      }
+    }
+  }
+
+  // Handle edge pixels (always render, they don't have 4 neighbors)
+  for (let py = 0; py < height; py++) {
+    for (let px = 0; px < width; px++) {
+      const idx = py * width + px;
+      if (smoothValues[idx] === -999 && (px === 0 || px === width - 1 || py === 0 || py === height - 1)) {
+        unrenderedPixels.push({ px, py, idx });
+      }
+    }
+  }
+
+  const totalPixels = width * height;
+  const renderedPhase1 = Math.floor(totalPixels / 2);
+  const skipPercentage = (filledCount / totalPixels * 100).toFixed(1);
+
+  console.log(`    ✓ ${filledCount.toLocaleString()} pixels auto-filled (${skipPercentage}% of total)`);
+  console.log(`    Remaining to render: ${unrenderedPixels.length.toLocaleString()} pixels`);
+  console.log(`    ${((Date.now() - startPhase2) / 1000).toFixed(1)}s`);
+
+  // ============================================================================
+  // PASS 3: Render remaining pixels
+  // ============================================================================
+  console.log(`  Phase 3: Rendering remaining pixels...`);
+  const startPhase3 = Date.now();
+
+  for (const { px, py, idx } of unrenderedPixels) {
+    const x0 = xMin + (xMax - xMin) * px / width;
+    const y0 = yMin + (yMax - yMin) * py / height;
+    const result = iterateFn(x0, y0, maxIter);
+    smoothValues[idx] = result.inSet ? -1 : result.smooth;
+  }
+
+  const totalRendered = renderedPhase1 + unrenderedPixels.length;
+  const totalSavings = ((totalPixels - totalRendered) / totalPixels * 100).toFixed(1);
+
+  console.log(`    ✓ ${((Date.now() - startPhase3) / 1000).toFixed(1)}s`);
+  console.log(`  📊 Total: ${totalRendered.toLocaleString()}/${totalPixels.toLocaleString()} pixels calculated (${totalSavings}% saved)\n`);
 
   // ============================================================================
   // BUILD CDF: Analyze iteration distribution for color normalization

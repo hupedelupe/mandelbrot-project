@@ -7,92 +7,67 @@
     "publicUrl": "http://141.147.117.4/fractals/fractal.png"
   },
   "qualityControl": {
-      "minColorDiversity": 0.3,
-      "minVisiblePixels": 0.7,
-      "minComplexityScore": 0,
-      "minGeometryScore": 0.30,
-      "minActiveCells": 8,
-      "minEdgeDensity": 0.1,
-      "comment": "minGeometryScore: 0-1, measures edge density and detail. minActiveCells: out of 25 grid cells (5×5)"
-    },
+    "minColorDiversity": 0.3,
+    "minVisiblePixels": 0.7,
+    "minComplexityScore": 0,
+    "minGeometryScore": 0.30,
+    "minActiveCells": 8,
+    "minEdgeDensity": 0.1
+  },
   "generation": {
     "zoomMax": 1e10,
     "zoomRange": {
       "min": 20,
-      "max": 150,
-      "comment": "Broader starting range"
+      "max": 150
     },
     "zoomSteps": {
       "min": 3,
-      "max": 12,
-      "comment": "Wider step range = more depth variety"
+      "max": 12
     },
     "zoomMultiplier": {
       "min": 2,
-      "max": 6,
-      "comment": "Lower max prevents overshooting"
+      "max": 6
     },
-    "searchSamples": 100,
-    "comment": "High sampling for good boundary detection"
+    "searchSamples": 100
   },
   "rendering": {
     "maxIterMultiplier": 10,
-    "comment": "Higher = more detail and color variation",
-
     "maxTotalIterations": 100000000000,
-    "maxTotalIterationsComment": "Safety threshold: scale down maxIter if total iterations across all renders would exceed this (100 billion default)",
-
     "scanResolution": 1200,
-    "scanResolutionComment": "Low-res render size for finding crop regions. Much faster than full 4096×4096",
-
     "colorSmoothing": {
       "enabled": true,
       "brightness": {
         "base": 0.8,
         "amplitude": 0.6,
-        "frequency": 0.05,
-        "comment": "Higher frequency = more color detail and variation"
+        "frequency": 0.05
       }
     },
-    
     "paletteMapping": {
-      "cycleMode": "modulo",
-      "comment": "Back to modulo for full color range"
+      "cycleMode": "modulo"
     },
-    
     "antiGrain": {
       "enabled": true,
-      "blendFactor": 0.45,
-      "comment": "Light smoothing to reduce banding but keep detail"
+      "blendFactor": 0.45
     }
   },
   "diversity": {
-    "regionWeights": {
-      "spiral": 1.0,
-      "seahorse": 1.0,
-      "elephant": 1.0,
-      "other": 1.0,
-      "comment": "Adjust these to prefer certain region types. 0 = never pick, 2.0 = twice as likely"
-    },
-    "paletteWeights": {
-      "warm": 1.0,
-      "cool": 1.0,
-      "vibrant": 1.0,
-      "muted": 1.0,
-      "comment": "Same for palettes. Categorize your palettes and adjust weights"
-    },
-    "avoidRecentRegions": 5,
-    "comment": "Remember last N regions and avoid them for variety"
+    "avoidRecentRegions": 5
   },
-  "fractalVariety": {
-    "enabled": true,
-    "weights": {
-      "Mandelbrot": 1,
-      "BurningShip": 0,
-      "Mandelbrot3": 1,
-      "Mandelbrot4": 1,
-      "Tricorn": 0
+  "parameterSelection": {
+    "integerPowerWeight": 0.75,
+    "complexPowerWeight": 0.25,
+    "integerPowers": {
+      "2": 1,
+      "3": 1,
+      "4": 1,
+      "5": 0,
+      "6": 0
     },
-    "comment": "75% classic Mandelbrot, 15% Burning Ship, 8% Mandelbrot3, 2% Tricorn"
+    "variants": {
+      "standard": 1,
+      "conjugate": 0,
+      "burning-ship": 0
+    },
+    "organicExplorationRate": 0.15
   }
 }

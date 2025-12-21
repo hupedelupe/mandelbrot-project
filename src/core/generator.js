@@ -11,20 +11,29 @@ const { zoomIntoFractal } = require('../zoom/fractalZoomFocus');
 const recentRegions = [];
 
 function selectRegion(config, fractal, regionName = null) {
+  // Fractals with dynamically generated regions (e.g., complex powers or organic exploration)
+  if (fractal.usesDynamicRegions && fractal.regions) {
+    const availableRegions = fractal.regions;
+    const selected = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+    // Zoom strategy is already attached to the region
+    return selected;
+  }
+
+  // Forced region by name
   if (regionName) {
     const region = getRegionByName(fractal.name, regionName);
     if (!region) throw new Error(`Region "${regionName}" not found for fractal ${fractal.name}`);
     return region;
   }
 
-  // Get all regions for this fractal
+  // Get all regions for this fractal using name-based lookup
   let availableRegions = getRegionsForFractal(fractal.name);
 
   if (availableRegions.length === 0) {
     throw new Error(`No regions defined for fractal ${fractal.name}`);
   }
 
-  // Filter out recently used regions if diversity settings exist
+  // Filter out recently used regions for variety
   const avoidCount = config.diversity?.avoidRecentRegions || 0;
 
   if (avoidCount > 0 && recentRegions.length > 0) {
@@ -32,13 +41,6 @@ function selectRegion(config, fractal, regionName = null) {
     if (filtered.length > 0) {
       availableRegions = filtered;
     }
-    // Otherwise keep all available regions
-  }
-
-  // Apply region weights if configured
-  if (config.diversity?.regionWeights) {
-    // This is a placeholder for weighted selection
-    // You could categorize regions and apply weights
   }
 
   const selected = availableRegions[Math.floor(Math.random() * availableRegions.length)];
@@ -194,13 +196,6 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     log(`✓ Sample passed - rendering scan image for crop finding...`);
 
     // Render at scan resolution to find crop regions (much faster than full res)
-    const scanTotalPixels = scanRes * scanRes;
-    const scanMaxIterations = scanTotalPixels * maxIter;
-    console.log(`\n📊 SCAN RENDER - Iteration Calculation:`);
-    console.log(`  Dimensions: ${scanRes} × ${scanRes} = ${scanTotalPixels.toLocaleString()} pixels`);
-    console.log(`  Max Iterations per pixel: ${maxIter}`);
-    console.log(`  Maximum total iterations: ${scanMaxIterations.toLocaleString()}`);
-    console.log(`  (Actual will be lower as many pixels escape early)\n`);
 
     const { canvas, imageData } = renderFractal(
       scanRes,
@@ -236,17 +231,6 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     }
 
     log(`✓ Quality check passed!`);
-
-    // Calculate grand total iterations across all renders (reuse variables from constraint check)
-    const grandTotalPixels = scanPixels + desktopPixels + mobilePixels;
-    const grandTotalMaxIterations = grandTotalPixels * maxIter;
-    console.log(`\n📊 GRAND TOTAL (All Renders):`);
-    console.log(`  Scan: ${scanPixels.toLocaleString()} pixels`);
-    console.log(`  Desktop: ${desktopPixels.toLocaleString()} pixels`);
-    console.log(`  Mobile: ${mobilePixels.toLocaleString()} pixels`);
-    console.log(`  Combined: ${grandTotalPixels.toLocaleString()} pixels`);
-    console.log(`  Maximum total iterations: ${grandTotalMaxIterations.toLocaleString()}`);
-    console.log(`  (This is the theoretical maximum - actual will be significantly lower)\n`);
 
     return {
       canvas,

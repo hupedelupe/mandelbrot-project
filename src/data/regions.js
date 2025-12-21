@@ -124,27 +124,6 @@ const regions = {
   }
   ],
 
-  BurningShip: [
-    {
-      cx: -1.75,
-      cy: -0.03,
-      name: "Ship_Bow",
-      qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.20, minActiveCells: 8, minColorDiversity: 0.1, minComplexityScore: 0 }
-    },
-    {
-      cx: -1.755,
-      cy: 0.03,
-      name: "Ship_Stern",
-      qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.18, minActiveCells: 8, minColorDiversity: 0.1, minComplexityScore: 0 }
-    },
-    {
-      cx: -1.62,
-      cy: -0.05,
-      name: "Antenna",
-      qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.22, minActiveCells: 9, minColorDiversity: 0.1, minComplexityScore: 0 }
-    }
-  ],
-
   Mandelbrot3: [
     {
       cx: 0.0,
@@ -164,162 +143,6 @@ const regions = {
       name: "Side_Detail",
       qualityControl: { minVisiblePixels: 0.7, minEdgeDensity: 0.02, minGeometryScore: 0.19, minActiveCells: 8, minColorDiversity: 0.1, minComplexityScore: 0 }
     }
-  ],
-
-  Mandelbrot4: [
-    {
-      cx: 0.0,
-      cy: 0.0,
-      name: "Quartic_Core",
-      qualityControl: {
-        minVisiblePixels: 0.75,
-        minEdgeDensity: 0.02,
-        minGeometryScore: 0.20,
-        minActiveCells: 10,
-        minColorDiversity: 0.12,
-        minComplexityScore: 0
-      }
-    },
-    {
-      cx: 0.0,
-      cy: 0.95,
-      name: "Upper_Petal",
-      qualityControl: {
-        minVisiblePixels: 0.70,
-        minEdgeDensity: 0.025,
-        minGeometryScore: 0.22,
-        minActiveCells: 9,
-        minColorDiversity: 0.12,
-        minComplexityScore: 0
-      }
-    },
-    {
-      cx: 0.0,
-      cy: -0.95,
-      name: "Lower_Petal",
-      qualityControl: {
-        minVisiblePixels: 0.70,
-        minEdgeDensity: 0.025,
-        minGeometryScore: 0.22,
-        minActiveCells: 9,
-        minColorDiversity: 0.12,
-        minComplexityScore: 0
-      }
-    },
-    {
-      cx: 0.7,
-      cy: 0.7,
-      name: "Diagonal_Flower",
-      qualityControl: {
-        minVisiblePixels: 0.65,
-        minEdgeDensity: 0.03,
-        minGeometryScore: 0.23,
-        minActiveCells: 9,
-        minColorDiversity: 0.14,
-        minComplexityScore: 0
-      }
-    },
-    {
-      cx: -0.7,
-      cy: 0.7,
-      name: "Mirrored_Diagonal",
-      qualityControl: {
-        minVisiblePixels: 0.65,
-        minEdgeDensity: 0.03,
-        minGeometryScore: 0.23,
-        minActiveCells: 9,
-        minColorDiversity: 0.14,
-        minComplexityScore: 0
-      }
-    },
-    {
-      cx: 0.45,
-      cy: 0.0,
-      name: "Side_Lobe",
-      qualityControl: {
-        minVisiblePixels: 0.70,
-        minEdgeDensity: 0.028,
-        minGeometryScore: 0.21,
-        minActiveCells: 8,
-        minColorDiversity: 0.13,
-        minComplexityScore: 0
-      }
-    }
-  ],
-  
-
-  Tricorn: [
-    // {
-    //   cx: -1.25,
-    //   cy: 0.0,
-    //   name: "Left_Tricorn_Fang",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-
-    // no edges
-    // {
-    //   cx: -0.1,
-    //   cy: 0.65,
-    //   name: "Northern_Tricorn_Claws",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-
-    // no complexity
-    // {
-    //   cx: -0.1,
-    //   cy: -0.65,
-    //   name: "Southern_Tricorn_Claws",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-
-    // {
-    //   cx: -0.75,
-    //   cy: 0.0,
-    //   name: "Central_Tricorn_Blade",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-    // {
-    //   cx: -0.05,
-    //   cy: 0.745,
-    //   name: "Spiral_Talon_North",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-    // {
-    //   cx: -0.05,
-    //   cy: -0.745,
-    //   name: "Spiral_Talon_South",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-    {
-      cx: -0.2,
-      cy: 0.6,
-      name: "Twisted_Filament_Garden",
-      qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    },
-    // {
-    //   cx: -1.3,
-    //   cy: 0.12,
-    //   name: "Lightning_Claw_East",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-    // {
-    //   cx: -1.15,
-    //   cy: 0.2,
-    //   name: "Electric_Talon",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // }
-    // {
-    //   cx: -0.085,
-    //   cy: 0.742,
-    //   name: "Micro_Spiral_Nexus",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // },
-    // {
-    //   cx: -0.18,
-    //   cy: 0.57,
-    //   name: "Quantum_Filament_Core",
-    //   qualityControl: { minVisiblePixels: 0.5, minEdgeDensity: 0.008, minGeometryScore: 0.10, minActiveCells: 5, minColorDiversity: 0.08, minComplexityScore: 0 }
-    // }
   ],
 
   Mandelbrot4: [
@@ -366,7 +189,7 @@ const regions = {
         zoomMult: { min: 1.8, max: 3.0 },
         searchSamples: 200,
         minComplexity: 5,
-        skipComplexityCheckSteps: 3
+        skipComplexityCheckSteps: 2
       }
     },
     {
@@ -389,7 +212,7 @@ const regions = {
         zoomMult: { min: 1.8, max: 3.0 },
         searchSamples: 200,
         minComplexity: 5,
-        skipComplexityCheckSteps: 3
+        skipComplexityCheckSteps: 2
       }
     },
     {
@@ -412,7 +235,7 @@ const regions = {
         zoomMult: { min: 1.8, max: 3.0 },
         searchSamples: 200,
         minComplexity: 5,
-        skipComplexityCheckSteps: 3
+        skipComplexityCheckSteps: 2
       }
     },
     {
@@ -525,8 +348,65 @@ function getRegionByName(fractalName, regionName) {
   return fractalRegions.find(r => r.name === regionName);
 }
 
+/**
+ * Map power/variant parameters to legacy fractal names
+ */
+function parametersToFractalName(power, variant = 'standard') {
+  const { real, imag } = power;
+
+  // Standard variant with integer powers
+  if (variant === 'standard' && imag === 0 && Number.isInteger(real)) {
+    if (real === 2) return 'Mandelbrot';
+    if (real === 3) return 'Mandelbrot3';
+    if (real === 4) return 'Mandelbrot4';
+  }
+
+  // Tricorn (conjugate variant of z^2)
+  if (variant === 'conjugate' && real === 2 && imag === 0) {
+    return 'Tricorn';
+  }
+
+  // Burning Ship
+  if (variant === 'burning-ship' && real === 2 && imag === 0) {
+    return 'BurningShip';
+  }
+
+  return null; // Unknown power/variant - no pre-defined regions
+}
+
+/**
+ * Get regions for a power/variant combination (NEW PARAMETER-BASED API)
+ */
+function getRegionsForPower(power, variant = 'standard') {
+  const fractalName = parametersToFractalName(power, variant);
+  return fractalName ? regions[fractalName] || [] : [];
+}
+
+/**
+ * Get a specific region by name for a power/variant (NEW PARAMETER-BASED API)
+ */
+function getRegionByKey(power, variant, regionName) {
+  const fractalRegions = getRegionsForPower(power, variant);
+  return fractalRegions.find(r => r.name === regionName);
+}
+
+/**
+ * Get random region for a power/variant (NEW PARAMETER-BASED API)
+ */
+function getRandomRegionForPower(power, variant = 'standard') {
+  const fractalRegions = getRegionsForPower(power, variant);
+  if (fractalRegions.length === 0) return null;
+  return fractalRegions[Math.floor(Math.random() * fractalRegions.length)];
+}
+
 module.exports = {
   regions,
+  // New parameter-based API
+  getRegionsForPower,
+  getRegionByKey,
+  getRandomRegionForPower,
+  parametersToFractalName,
+  // Legacy name-based API
   getRegionsForFractal,
   getRandomRegion,
   getRegionByName

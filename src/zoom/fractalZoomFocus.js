@@ -22,6 +22,7 @@ function zoomIntoFractal(
 
     let complexityWeight, avgIterWeight, centerBiasWeight;
     let actualZoomSteps, actualSearchSamples, actualZoomMultMin, actualZoomMultMax, actualMinComplexity;
+    let adaptiveZoomMultMax, highComplexityThreshold;
     let skipComplexitySteps;
 
     if (strategy) {
@@ -37,10 +38,10 @@ function zoomIntoFractal(
       actualSearchSamples = strategy.searchSamples || searchSamples;
       actualZoomMultMin = strategy.zoomMult?.min || zoomMultMin;
       actualZoomMultMax = strategy.zoomMult?.max || zoomMultMax;
+      adaptiveZoomMultMax = strategy.zoomMult?.adaptiveMax || actualZoomMultMax;
+      highComplexityThreshold = strategy.highComplexityThreshold || 30;
       actualMinComplexity = strategy.minComplexity !== undefined ? strategy.minComplexity : 15;
       skipComplexitySteps = strategy.skipComplexityCheckSteps || 0;
-
-      log(`Using zoom strategy for ${regionConfig.name || 'region'}`);
     } else {
       // Fallback to random weights (legacy behavior)
       function randomWeights3() {
@@ -54,6 +55,8 @@ function zoomIntoFractal(
       actualSearchSamples = searchSamples;
       actualZoomMultMin = zoomMultMin;
       actualZoomMultMax = zoomMultMax;
+      adaptiveZoomMultMax = zoomMultMax;
+      highComplexityThreshold = 30;
       actualMinComplexity = 15;  // Default minimum complexity
       skipComplexitySteps = 0;   // No skipping by default
     }
@@ -96,9 +99,18 @@ function zoomIntoFractal(
       if (boundary.foundGood) {
         currentX = boundary.x;
         currentY = boundary.y;
-        const zoomMult = actualZoomMultMin + Math.random() * (actualZoomMultMax - actualZoomMultMin);
+
+        // Adaptive zoom: use faster multiplier when complexity is high
+        // Always use gentle zoom for final 3 steps (precision at end)
+        const isHighComplexity = boundary.complexity > highComplexityThreshold;
+        const isFinalSteps = step >= (actualZoomSteps - 3);
+        const maxMult = (isHighComplexity && !isFinalSteps) ? adaptiveZoomMultMax : actualZoomMultMax;
+
+        const zoomMult = actualZoomMultMin + Math.random() * (maxMult - actualZoomMultMin);
         currentZoom *= zoomMult;
-        log(`Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (zoomMult: ${zoomMult.toFixed(2)}×)`);
+
+        const adaptiveNote = (isHighComplexity && !isFinalSteps) ? ' [fast]' : '';
+        log(`Step ${step + 1}: Complexity ${boundary.complexity.toFixed(1)} at ${currentZoom.toFixed(0)}× (${zoomMult.toFixed(2)}×)${adaptiveNote}`);
       } else {
         log(`Step ${step + 1}: Low complexity - stopping`);
         break;
@@ -108,7 +120,7 @@ function zoomIntoFractal(
     // -----------------------------
     // Inner deep-focus refine zoom
     // -----------------------------
-    for (let stepInner = 0; stepInner < Math.min(5, (actualZoomSteps * 2)); stepInner++) {
+    for (let stepInner = 0; stepInner < Math.min(5, ((actualZoomSteps * 2))+10); stepInner++) {
       const searchRadiusInner = Math.max(0.25 / currentZoom, 1e-6);
 
       const boundaryInner = findBestBoundaryPoint(
@@ -184,11 +196,18 @@ function zoomIntoFractal(
           iterateFn(x, y + delta, maxIter),
           iterateFn(x, y - delta, maxIter)
         ];
-  
-        const complexity = neighbors.reduce((acc, n) => acc + Math.abs(center.iter - n.iter), 0);
+
+        // Filter out maxIter neighbors - they're in the set (black) and create false variance
+        // We only want complexity from actual escaped pixels (colorful boundary detail)
+        const escapedNeighbors = neighbors.filter(n => !n.inSet);
+
+        // Need at least 2 escaped neighbors to calculate meaningful complexity
+        if (escapedNeighbors.length < 2) continue;
+
+        const complexity = escapedNeighbors.reduce((acc, n) => acc + Math.abs(center.iter - n.iter), 0);
         if (complexity < minComplexity) continue;
-  
-        const avgIter = (center.iter + neighbors.reduce((a, n) => a + n.iter, 0)) / 5;
+
+        const avgIter = (center.iter + escapedNeighbors.reduce((a, n) => a + n.iter, 0)) / (escapedNeighbors.length + 1);
   
         const dx = (x - cx) / searchRadius;
         const dy = (y - cy) / searchRadius;

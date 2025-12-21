@@ -45,8 +45,8 @@ LOG_FILE="$REPO_DIR/mandelbrot.log"
 # Create log file if it doesn't exist
 touch "$LOG_FILE"
 
-# Cron runs at :50 past each hour (gives time to complete before the hour)
-CRON_CMD="50 * * * * cd $REPO_DIR && node $GENERATOR_SCRIPT >> $LOG_FILE 2>&1"
+# Cron runs at :30 past each hour
+CRON_CMD="30 * * * * cd $REPO_DIR && node $GENERATOR_SCRIPT >> $LOG_FILE 2>&1"
 EXISTING_CRON=$(crontab -l 2>/dev/null || true)
 
 # Check if cron already contains a job for this script

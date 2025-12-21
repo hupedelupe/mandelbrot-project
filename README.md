@@ -1,6 +1,37 @@
 # Mandelbrot Fractal Wallpaper Generator
 
-Advanced fractal generator that creates stunning, high-quality wallpapers with intelligent quality control and adaptive rendering. Supports multiple fractal types, automatic device-specific cropping, and smart iteration management to prevent system overload.
+Advanced fractal generator that creates stunning, high-quality wallpapers with intelligent quality control and adaptive rendering. Supports both **integer power fractals** (Mandelbrot, Burning Ship, Tricorn) with pre-defined regions, and **complex power fractals** with dynamic region discovery.
+
+## Two Fractal Systems
+
+### 1. Integer Power Mode (Classic Fractals)
+Pre-defined fractals (Mandelbrot z², z³, z⁴, Burning Ship, Tricorn) with hand-crafted seed regions for production wallpaper generation.
+
+### 2. Complex Power Mode (Exploration)
+Arbitrary complex powers (z^(a + bi)) with dynamic region discovery - explore infinite fractal variations!
+
+## Quick Start
+
+### Integer Power (Classic)
+```bash
+# Generate random classic fractal
+node src/index.js --test
+
+# Specific fractal
+node src/index.js --fractal=Mandelbrot3 --test
+```
+
+### Complex Power (Exploration)
+```bash
+# Quick exploration (fast)
+node src/index.js --random --mode=quick
+
+# Deep zoom (can reach millions× magnification!)
+node src/index.js --power-real=2.5 --power-imag=0.3 --mode=deep
+
+# Production quality
+node src/index.js --random --mode=production --count=10
+```
 
 ## Features
 
@@ -112,8 +143,7 @@ node src/index.js --test --region=Seahorse_Valley --palette=Cyber_Spectrum
 - `Mandelbrot` - Classic Mandelbrot set (z²)
 - `Mandelbrot3` - Cubic Mandelbrot (z³)
 - `Mandelbrot4` - Quartic Mandelbrot (z⁴) - densest, most likely to trigger adaptive constraints
-- `BurningShip` - Burning Ship fractal
-- `Tricorn` - Tricorn (Mandelbar) fractal
+- `MandelbrotI` - Imaginary powers Mandelbrot (z^(a+ib)) - abstract curved boundaries
 
 ## Configuration
 
