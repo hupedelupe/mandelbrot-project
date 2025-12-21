@@ -161,7 +161,7 @@ Output:
     outputDir = './output/test-production';
     mode = 'TEST PRODUCTION';
   } else {
-    outputDir = './output/fractals';
+    outputDir = config.server.outputDir;
     mode = 'GENERATION';
   }
 
