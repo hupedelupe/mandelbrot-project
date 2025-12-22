@@ -105,15 +105,15 @@ function isKnown(power, variant) {
     return power.real >= 2 && power.real <= 4;
   }
 
-  // Tricorn (power 2 with conjugate) is known
-  if (variant === 'conjugate' && power.real === 2 && power.imag === 0) {
-    return true;
-  }
+  // // Tricorn (power 2 with conjugate) is known
+  // if (variant === 'conjugate' && power.real === 2 && power.imag === 0) {
+  //   return true;
+  // }
 
-  // Burning Ship (power 2 with burning-ship) is known
-  if (variant === 'burning-ship' && power.real === 2 && power.imag === 0) {
-    return true;
-  }
+  // // Burning Ship (power 2 with burning-ship) is known
+  // if (variant === 'burning-ship' && power.real === 2 && power.imag === 0) {
+  //   return true;
+  // }
 
   return false;
 }
@@ -132,15 +132,15 @@ function generateFractalName(power, variant) {
     return `Mandelbrot${real}`;
   }
 
-  // Tricorn (conjugate variant of z^2)
-  if (variant === 'conjugate' && real === 2 && imag === 0) {
-    return 'Tricorn';
-  }
+  // // Tricorn (conjugate variant of z^2)
+  // if (variant === 'conjugate' && real === 2 && imag === 0) {
+  //   return 'Tricorn';
+  // }
 
-  // Burning Ship
-  if (variant === 'burning-ship' && real === 2 && imag === 0) {
-    return 'BurningShip';
-  }
+  // // Burning Ship
+  // if (variant === 'burning-ship' && real === 2 && imag === 0) {
+  //   return 'BurningShip';
+  // }
 
   // Complex power: format like "Power_2.50_p0.75i" or "Power_3.20_m0.50i"
   const imagSign = imag >= 0 ? 'p' : 'm';
