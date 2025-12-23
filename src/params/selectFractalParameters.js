@@ -1,4 +1,8 @@
 const { weightedRandom } = require('./weightedRandom');
+const { parsePowerString } = require('./parsePowerString');
+// const { selectFractalParameters } = require('./selectFractalParameters');
+const { createFractal } = require('../fractals/fractalFactory');
+const { prepareSelectionParams } = require('../cli/prepareSelectionParams');
 
 function selectFractalParameters(config, testMode = false) {
   const paramConfig = config.parameterSelection || {};
@@ -11,11 +15,11 @@ function selectFractalParameters(config, testMode = false) {
   let power;
 
   if (powerType === 'integer') {
-    const weights = paramConfig.integerPowers || { 2: 1, 3: 1, 4: 1, 5: 1, 6: 1 };
+    const weights = paramConfig.integerPowers || { 2: 1, 3: 1, 4: 1};
     const n = weightedRandom(weights);
     power = { real: n, imag: 0 };
   } else {
-    const weights = paramConfig.integerPowers || { 2: 1, 3: 1, 4: 1, 5: 1, 6: 1 };
+    const weights = paramConfig.integerPowers || { 2: 1, 3: 1, 4: 1};
     const keys = Object.keys(weights).map(Number).filter(n => weights[n] > 0);
 
     const min = Math.min(...keys);
@@ -46,4 +50,53 @@ function selectFractalParameters(config, testMode = false) {
   };
 }
 
-module.exports = { selectFractalParameters };
+/**
+ * Produces a COMPLETE fractal run context.
+ * No config should be needed after this point.
+ */
+function prepareFractalContext(config, forcedArgs) {
+  // Merge config + CLI overrides + runtime flags
+  const prepared = prepareSelectionParams(config, forcedArgs);
+  const testMode = prepared.runtime.testMode ?? false;
+
+  // Choose base parameters (random or weighted)
+  const selected = selectFractalParameters(config, testMode);
+
+  // Resolve overrides (if any)
+  const power = prepared.overrides.power
+    ? parsePowerString(prepared.overrides.power)
+    : selected.power;
+
+  const variant = prepared.overrides.variant ?? selected.variant;
+  const useOrganicExploration =
+    prepared.overrides.organic ?? selected.useOrganicExploration;
+
+  // Create fractal definition
+  const fractal = createFractal({
+    power,
+    variant,
+    useOrganicExploration,
+    testMode
+  });
+
+  // Return FINAL context object
+  return {
+    ...fractal,                  // name, iterate, regions, zoomStrategy, etc
+    power,
+    variant,
+    useOrganicExploration,
+
+    // Attached runtime + overrides
+    runtime: prepared.runtime,
+    overrides: prepared.overrides,
+
+    // Server + output info
+    server: prepared.server,
+
+    rendering: prepared.rendering,
+
+    qualityControl: prepared.qualityControl
+  };
+}
+
+module.exports = { prepareFractalContext };

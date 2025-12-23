@@ -14,6 +14,7 @@ const { generateFractal, saveFractal } = require('./core/generator');
 const { generateDeviceCrops } = require('./output/dynamic-framing');
 const { selectFractalParameters } = require('./params/selectFractalParameters');
 const { parsePowerString } = require('./params/parsePowerString');
+const { prepareFractalContext } = require('./params/selectFractalParameters');
 
 // Load config
 const configPath = path.join(__dirname, '../config/config.json');
@@ -22,30 +23,30 @@ const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 async function main() {
   // --- CLI + config plumbing (no logic) ---
   const forcedArgs = parseArgs(process.argv.slice(2));
-  const prepared = prepareSelectionParams(config, forcedArgs);
 
   if (forcedArgs.help) {
     showHelp()
     process.exit(0);
   }
 
+  const fractalContext = prepareFractalContext(config, forcedArgs);
+
   // --- Runtime setup (same as before) ---
-  const count = prepared.runtime.count ?? 1;
-  const testMode = prepared.runtime.testMode;
+  const count = fractalContext.runtime.count ?? 1;
+  const testMode = fractalContext.runtime.testMode;
 
   const outputDir = testMode
     ? './output/test-production'
-    : prepared.server.outputDir;
+    : fractalContext.server.outputDir;
 
-  const mode = testMode ? 'TEST PRODUCTION' : 'GENERATION';
-
-  console.log(`\nMode: ${mode}`);
+  console.log(`\nMode: ${testMode ? 'TEST PRODUCTION' : 'GENERATION'}`);
   console.log(`Generating ${count} fractal(s)...`);
   console.log(`Output directory: ${outputDir}\n`);
 
+  // console.log(fractalContext)
+  // process.exit(0);
   let successCount = 0;
-
-  // --- Main generation loop (unchanged logic) ---
+  
   for (let i = 0; i < count; i++) {
     if (count > 1) {
       console.log(`\n${'='.repeat(60)}`);
@@ -53,41 +54,12 @@ async function main() {
       console.log('='.repeat(60));
     }
 
-    let params;
-
-    if (
-      prepared.overrides.power ||
-      prepared.overrides.variant ||
-      prepared.overrides.organic
-    ) {
-      const power = prepared.overrides.power
-        ? parsePowerString(prepared.overrides.power)
-        : selectFractalParameters(config, testMode).power;
-
-      params = {
-        power,
-        variant: prepared.overrides.variant || 'standard',
-        useOrganicExploration: prepared.overrides.organic,
-        testMode
-      };
-    } else {
-      params = selectFractalParameters(config, testMode);
-    }
-
-    const fractal = createFractal(params);
-
-    console.log(
-      `\n${fractal.name} → z^(${params.power.real.toFixed(2)}${
-        params.power.imag >= 0 ? '+' : ''
-      }${params.power.imag.toFixed(2)}i)`
-    );
-
     try {
       const result = await generateFractal({
-        config,
-        fractal,
-        forcedRegion: prepared.overrides.region,
-        forcedPalette: prepared.overrides.palette
+        fractalContext,
+        fractal: fractalContext,
+        forcedRegion: fractalContext.overrides.region,
+        forcedPalette: fractalContext.overrides.palette
       });
 
       console.log(
@@ -98,7 +70,7 @@ async function main() {
         imageData: result.imageData,
         width: result.scanResolution,
         height: result.scanResolution,
-        qualityConfig: prepared.qualityControl,
+        qualityConfig: fractalContext.qualityControl,
         metadata: result.metadata
       });
 
@@ -114,7 +86,7 @@ async function main() {
           : '';
 
         const filename = timestamp
-          ? `fractal_${timestamp}_${fractal.name}_${crop.name}`
+          ? `fractal_${timestamp}_${fractalContext.name}_${crop.name}`
           : `fractal_${crop.name}`;
 
         saveFractal(crop.canvas, outputDir, filename);

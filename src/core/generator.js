@@ -33,25 +33,25 @@ function selectRegion(config, fractal, regionName = null) {
     throw new Error(`No regions defined for fractal ${fractal.name}`);
   }
 
-  // Filter out recently used regions for variety
-  const avoidCount = config.diversity?.avoidRecentRegions || 0;
+  // // Filter out recently used regions for variety
+  // const avoidCount = config.diversity?.avoidRecentRegions || 0;
 
-  if (avoidCount > 0 && recentRegions.length > 0) {
-    const filtered = availableRegions.filter(r => !recentRegions.includes(r.name));
-    if (filtered.length > 0) {
-      availableRegions = filtered;
-    }
-  }
+  // if (avoidCount > 0 && recentRegions.length > 0) {
+  //   const filtered = availableRegions.filter(r => !recentRegions.includes(r.name));
+  //   if (filtered.length > 0) {
+  //     availableRegions = filtered;
+  //   }
+  // }
 
   const selected = availableRegions[Math.floor(Math.random() * availableRegions.length)];
 
-  // Track this region
-  if (avoidCount > 0) {
-    recentRegions.push(selected.name);
-    if (recentRegions.length > avoidCount) {
-      recentRegions.shift();
-    }
-  }
+  // // Track this region
+  // if (avoidCount > 0) {
+  //   recentRegions.push(selected.name);
+  //   if (recentRegions.length > avoidCount) {
+  //     recentRegions.shift();
+  //   }
+  // }
 
   return selected;
 }
@@ -78,7 +78,7 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     log(`Palette: ${selectedPalette.name}, Region: ${selectedRegion.name}`);
     
     // Use generation config if available
-    const genConfig = config.generation || {};
+    const genConfig = fractal
     const zoomMin = genConfig.zoomRange?.min || 10;
     const zoomMax = genConfig.zoomRange?.max || 100;
     const zoomStepsMin = genConfig.zoomSteps?.min || 3;
@@ -113,10 +113,10 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
       continue;
     }
 
-    log(`Rendering ${config.server.width}×${config.server.height}...`);
+    log(`Rendering ${fractal.server.width}×${fractal.server.height}...`);
     
     // Use rendering config multiplier if available
-    const iterMultiplier = config.rendering?.maxIterMultiplier || 1.0;
+    const iterMultiplier = fractal.rendering?.maxIterMultiplier || 1.0;
 
     // ============================================================================
     // QUICK SAMPLING: Check visibility before full render
@@ -126,7 +126,7 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     const sample = sampleFractalForQuality(
       finalX,
       finalY,
-      Math.min(finalZoom, config.generation.zoomMax),
+      Math.min(finalZoom, zoomMax),
       10000,
       qualityConfig,
       iterateFn
@@ -140,14 +140,14 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
       return Math.pow(x, 6) * Math.exp(x - 1);
     }
 
-    const minVisible = config.qualityControl.minVisiblePixels || 0.1;
+    const minVisible = qualityConfig.minVisiblePixels || 0.1;
     const visFactor = Math.max(0.1, (sample.visibleRatio - minVisible) / (1 - minVisible));
     const visScalar = visibilityScalar(visFactor);
 
     // Calculate base maxIter based on zoom level
     // Higher zoom = more detail = more iterations needed
     const baseMaxIter = Math.floor(
-      config.server.maxIter *
+      fractal.server.maxIter *
       iterMultiplier *
       (1 + Math.log10(finalZoom) / 2)
     );
@@ -165,13 +165,13 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     // Dense fractals (especially Mandelbrot^4) can have very high iteration counts
     // at deep zooms. This automatically scales down maxIter if the total projected
     // iterations across all renders would exceed the configured threshold.
-    const scanRes = config.rendering.scanResolution || 1200;
+    const scanRes = fractal.rendering.scanResolution || 1200;
     const desktopPixels = 4096 * 2304;
     const mobilePixels = 2304 * 4096;
     const scanPixels = scanRes * scanRes;
     const totalPixels = scanPixels + desktopPixels + mobilePixels;
     const projectedTotalIterations = totalPixels * maxIter;
-    const maxTotalIterations = config.rendering.maxTotalIterations || 100000000000;
+    const maxTotalIterations = fractal.rendering.maxTotalIterations || 100000000000;
 
     if (projectedTotalIterations > maxTotalIterations) {
       const scaleFactor = maxTotalIterations / projectedTotalIterations;
@@ -185,7 +185,7 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     }
 
     // Log final iteration settings
-    log(`Max iterations: ${maxIter} (base: ${config.server.maxIter}, multiplier: ${iterMultiplier}, zoom: ${finalZoom.toFixed(0)}×)`);
+    log(`Max iterations: ${maxIter} (base: ${fractal.server.maxIter}, multiplier: ${iterMultiplier}, zoom: ${finalZoom.toFixed(0)}×)`);
     log(`Visible ratio: ${(sample.visibleRatio * 100).toFixed(1)}% (min: ${qualityConfig.minVisiblePixels * 100}%)`);
 
     if (!sample.passes) {
@@ -202,10 +202,10 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
       scanRes,
       finalX,
       finalY,
-      Math.min(finalZoom, config.generation.zoomMax),
+      Math.min(finalZoom, zoomMax),
       selectedPalette,
       maxIter,
-      config.rendering,
+      fractal.rendering,
       iterateFn
     );
 
@@ -240,13 +240,13 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
         palette: selectedPalette.name,
         paletteObject: selectedPalette,
         region: selectedRegion.name,
-        zoom: Math.min(finalZoom, config.generation.zoomMax),
+        zoom: Math.min(finalZoom, zoomMax),
         centerX: finalX,
         centerY: finalY,
         maxIter,
         quality,
         iterateFn,  // Pass the iterate function for re-rendering crops
-        renderConfig: config.rendering
+        renderConfig: fractal.rendering
       }
     };
   }
