@@ -77,35 +77,24 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     
     log(`Palette: ${selectedPalette.name}, Region: ${selectedRegion.name}`);
     
-    // Use generation config if available
-    const genConfig = fractal
-    const zoomMin = genConfig.zoomRange?.min || 10;
-    const zoomMax = genConfig.zoomRange?.max || 100;
-    const zoomStepsMin = genConfig.zoomSteps?.min || 3;
-    const zoomStepsMax = genConfig.zoomSteps?.max || 5;
-    const zoomMultMin = genConfig.zoomMultiplier?.min || 3;
-    const zoomMultMax = genConfig.zoomMultiplier?.max || 10;
-    const searchSamples = genConfig.searchSamples || 35;
     const qualityConfig = selectedRegion.qualityControl || config.qualityControl;
     
-    let initialZoom = zoomMin + Math.random() * (zoomMax - zoomMin);
+    let initialZoom = 10 + Math.random() * (100 - 10);
     let initialX = selectedRegion.cx;
     let initialY = selectedRegion.cy;
     
-    const zoomSteps = zoomStepsMin + Math.floor(Math.random() * (zoomStepsMax - zoomStepsMin + 1));
-    
-    const { x: finalX, y: finalY, zoom: finalZoom, foundGood } = zoomIntoFractal(
-      initialX,
-      initialY,
-      initialZoom,
-      zoomSteps,
-      searchSamples,
-      zoomMultMin,
-      zoomMultMax,
+    // const zoomSteps = zoomStepsMin + Math.floor(Math.random() * (zoomStepsMax - zoomStepsMin + 1));
+    const { x: finalX, y: finalY, zoom: finalZoom, foundGood } =
+    zoomIntoFractal({
+      cx: initialX,
+      cy: initialY,
+      zoom: initialZoom,
+      zoomStrategy: fractal.zoomStrategy,
       qualityConfig,
       iterateFn,
-      selectedRegion  // Pass full region config (includes zoomStrategy)
-    );
+      log: console.log
+    });
+  
 
     // Fail-fast: skip rendering if zoom couldn't find interesting regions
     if (!foundGood) {
@@ -126,7 +115,7 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
     const sample = sampleFractalForQuality(
       finalX,
       finalY,
-      Math.min(finalZoom, zoomMax),
+      Math.min(finalZoom, finalZoom),
       10000,
       qualityConfig,
       iterateFn
@@ -202,7 +191,7 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
       scanRes,
       finalX,
       finalY,
-      Math.min(finalZoom, zoomMax),
+      Math.min(finalZoom, fractal.rendering.maxTotalIterations),
       selectedPalette,
       maxIter,
       fractal.rendering,
@@ -240,7 +229,7 @@ async function generateFractal({ config, fractal, forcedRegion, forcedPalette, m
         palette: selectedPalette.name,
         paletteObject: selectedPalette,
         region: selectedRegion.name,
-        zoom: Math.min(finalZoom, zoomMax),
+        zoom: Math.min(finalZoom, fractal.rendering.maxTotalIterations),
         centerX: finalX,
         centerY: finalY,
         maxIter,

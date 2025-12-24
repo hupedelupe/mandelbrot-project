@@ -6,14 +6,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { parseArgs } = require('./cli/parseArgs');
-const { prepareSelectionParams } = require('./cli/prepareSelectionParams');
 const { showHelp } = require('./cli/showHelp.js');
-
-const { createFractal } = require('./fractals/fractalFactory');
 const { generateFractal, saveFractal } = require('./core/generator');
 const { generateDeviceCrops } = require('./output/dynamic-framing');
-const { selectFractalParameters } = require('./params/selectFractalParameters');
-const { parsePowerString } = require('./params/parsePowerString');
 const { prepareFractalContext } = require('./params/selectFractalParameters');
 
 // Load config
@@ -46,6 +41,7 @@ async function main() {
   // console.log(fractalContext)
   // process.exit(0);
   let successCount = 0;
+  console.log(fractalContext.name)
   
   for (let i = 0; i < count; i++) {
     if (count > 1) {

@@ -81,21 +81,42 @@ function prepareFractalContext(config, forcedArgs) {
 
   // Return FINAL context object
   return {
-    ...fractal,                  // name, iterate, regions, zoomStrategy, etc
+    // Base fractal definition
+    ...fractal,                  // name, iterate, regions, etc.
+  
+    // Explicit fractal parameters
     power,
     variant,
     useOrganicExploration,
-
-    // Attached runtime + overrides
+  
+    // Runtime + overrides
     runtime: prepared.runtime,
     overrides: prepared.overrides,
-
-    // Server + output info
+  
+    // Server + rendering config
     server: prepared.server,
-
     rendering: prepared.rendering,
-
-    qualityControl: prepared.qualityControl
+    qualityControl: prepared.qualityControl,
+  
+    // Fully-resolved zoom strategy (NO defaults elsewhere)
+    zoomStrategy: {
+      complexityWeight: 0.7,
+      avgIterWeight: 0.25,
+      centerBiasWeight: 0.05,
+  
+      zoomSteps: 10,
+      searchSamples: 100,
+  
+      zoomMult: {
+        min: 1.8,
+        max: 2.5,
+        adaptiveMax: 3.5
+      },
+  
+      minComplexity: 5,
+      highComplexityThreshold: 30,
+      skipComplexityCheckSteps: 2
+    }
   };
 }
 
