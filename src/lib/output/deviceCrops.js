@@ -1,9 +1,9 @@
-// dynamicFraming.js
+// deviceCrops.js
 // Finds best crops for multiple aspect ratios from a large render
 
 const { createCanvas } = require('canvas');
-const { analyzeImageQuality } = require('../core/quality');
-const { renderFractal } = require('../core/renderer');
+const { analyzeImageQuality } = require('../generation/quality');
+const { renderFractal } = require('../generation/renderer');
 
 /* ================================
    Rectangle overlap utilities
@@ -146,13 +146,13 @@ function findBestCropForAspect(
    MAIN ENTRY POINT
 ================================ */
 
-function generateDeviceCrops({
-    imageData,
-    width,
-    height,
-    qualityConfig,
-    metadata
-  }) {
+function generateDeviceCrops(result, context) {
+    // Extract from result and context
+    const { imageData, scanResolution, metadata } = result;
+    const width = scanResolution;
+    const height = scanResolution;
+    const qualityConfig = context.qualityControl;
+
     // Extract fractal parameters from metadata
     const { centerX, centerY, zoom, maxIter, paletteObject, iterateFn, renderConfig } = metadata;
 

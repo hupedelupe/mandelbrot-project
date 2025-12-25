@@ -2,7 +2,7 @@
 // Factory for creating fractal configurations from parameters
 
 const { createIterator } = require('./core/iterate');
-const { findDynamicRegions, createZoomStrategy } = require('../analysis/dynamicRegionFinder');
+const { findDynamicRegions, createZoomStrategy } = require('./dynamicRegionFinder');
 
 /**
  * Create a fractal configuration from parameters

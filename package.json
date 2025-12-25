@@ -8,8 +8,9 @@
   },
   "scripts": {
     "generate": "node src/index.js",
-    "test": "node src/index.js --test --count 5",
-    "test-production": "node src/index.js --test-production --count 3"
+    "bulk": "node src/bulk-generate.js",
+    "test": "node src/bulk-generate.js --test --count 5",
+    "test-production": "node src/bulk-generate.js --test-production --count 3"
   },
   "keywords": [
     "mandelbrot",

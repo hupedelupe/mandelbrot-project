@@ -1,8 +1,9 @@
 const { weightedRandom } = require('./weightedRandom');
 const { parsePowerString } = require('./parsePowerString');
-// const { selectFractalParameters } = require('./selectFractalParameters');
 const { createFractal } = require('../fractals/fractalFactory');
 const { prepareSelectionParams } = require('../cli/prepareSelectionParams');
+const { getRandomPalette, getPaletteByName } = require('../data/palettes');
+const { getRegionsForFractal, getRegionByName } = require('../data/regions');
 
 function selectFractalParameters(config, testMode = false) {
   const paramConfig = config.parameterSelection || {};
@@ -51,8 +52,51 @@ function selectFractalParameters(config, testMode = false) {
 }
 
 /**
- * Produces a COMPLETE fractal run context.
- * No config should be needed after this point.
+ * Select palette (random or forced by override)
+ */
+function selectPalette(context) {
+  const forcedPalette = context.overrides?.palette;
+  if (forcedPalette) {
+    const palette = getPaletteByName(forcedPalette);
+    if (!palette) throw new Error(`Palette "${forcedPalette}" not found`);
+    return palette;
+  }
+  return getRandomPalette();
+}
+
+/**
+ * Select region (random or forced by override)
+ */
+function selectRegion(context) {
+  const forcedRegion = context.overrides?.region;
+
+  // Fractals with dynamically generated regions (e.g., complex powers or organic exploration)
+  if (context.usesDynamicRegions && context.regions) {
+    const availableRegions = context.regions;
+    return availableRegions[Math.floor(Math.random() * availableRegions.length)];
+  }
+
+  // Forced region by name
+  if (forcedRegion) {
+    const region = getRegionByName(context.name, forcedRegion);
+    if (!region) throw new Error(`Region "${forcedRegion}" not found for fractal ${context.name}`);
+    return region;
+  }
+
+  // Get all regions for this fractal using name-based lookup
+  const availableRegions = getRegionsForFractal(context.name);
+
+  if (availableRegions.length === 0) {
+    throw new Error(`No regions defined for fractal ${context.name}`);
+  }
+
+  return availableRegions[Math.floor(Math.random() * availableRegions.length)];
+}
+
+/**
+ * Produces a COMPLETE fractal run context with ALL parameters selected.
+ * This includes fractal definition, palette, region, zoom strategy, quality config, etc.
+ * Nothing should need to be selected after this point - just execution.
  */
 function prepareFractalContext(config, forcedArgs) {
   // Merge config + CLI overrides + runtime flags
@@ -79,44 +123,55 @@ function prepareFractalContext(config, forcedArgs) {
     testMode
   });
 
-  // Return FINAL context object
-  return {
+  // Build base context (fractal + configs)
+  const baseContext = {
     // Base fractal definition
     ...fractal,                  // name, iterate, regions, etc.
-  
+
     // Explicit fractal parameters
     power,
     variant,
     useOrganicExploration,
-  
+
     // Runtime + overrides
     runtime: prepared.runtime,
     overrides: prepared.overrides,
-  
+
     // Server + rendering config
     server: prepared.server,
     rendering: prepared.rendering,
     qualityControl: prepared.qualityControl,
-  
+
     // Fully-resolved zoom strategy (NO defaults elsewhere)
     zoomStrategy: {
       complexityWeight: 0.7,
       avgIterWeight: 0.25,
       centerBiasWeight: 0.05,
-  
+
       zoomSteps: 10,
       searchSamples: 100,
-  
+
       zoomMult: {
         min: 1.8,
         max: 2.5,
         adaptiveMax: 3.5
       },
-  
+
       minComplexity: 5,
       highComplexityThreshold: 30,
       skipComplexityCheckSteps: 2
     }
+  };
+
+  // SELECT palette and region (random or forced by overrides)
+  const selectedPalette = selectPalette(baseContext);
+  const selectedRegion = selectRegion(baseContext);
+
+  // Return COMPLETE context with everything selected
+  return {
+    ...baseContext,
+    selectedPalette,
+    selectedRegion
   };
 }
 
